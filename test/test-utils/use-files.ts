@@ -7,8 +7,8 @@ import { getFilesInfo, type FileInfo } from './get-files-info.js';
 import { NEW_DIR_NAME } from './use-dirs.js';
 
 import type { FsHooks } from '@app/fs-hooks.js';
-import type { CoreHooks } from '@app-types/core-hooks.types.js';
 import type { TreeInterface } from '@app-types/tree.types.js';
+import type { CoreHooks } from '@core-hooks/core-hooks.types.js';
 
 type UseFilesCb = (hooks: CoreHooks['file'], file: FileInfo) => void;
 

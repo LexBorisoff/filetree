@@ -4,6 +4,7 @@ import type {
   TreeInterface,
 } from './tree.types.js';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type HookFn = (...args: any[]) => any;
 export type HooksRecord = Record<string, HookFn | undefined>;
 
