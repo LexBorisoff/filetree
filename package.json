@@ -1,5 +1,5 @@
 {
-  "name": "fs-hooks",
+  "name": "@lexjs/filetree",
   "version": "0.0.0-semantically-released",
   "description": "Library for working with the file system in Node.js",
   "type": "module",
@@ -14,9 +14,9 @@
       "default": "./dist/app/index.js"
     },
     "./core": {
-      "types": "./dist/types/core-hooks/index.d.ts",
-      "import": "./dist/app/core-hooks/index.js",
-      "default": "./dist/app/core-hooks/index.js"
+      "types": "./dist/types/core-actions/index.d.ts",
+      "import": "./dist/app/core-actions/index.js",
+      "default": "./dist/app/core-actions/index.js"
     }
   },
   "scripts": {
@@ -41,20 +41,21 @@
     "dist"
   ],
   "keywords": [
-    "node",
     "fs",
-    "hooks",
-    "fs-hooks"
+    "node",
+    "filetree",
+    "file-tree",
+    "file-system"
   ],
   "author": "Lex Borisoff <lex@borisoff.dev>",
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LexBorisoff/fs-hooks.git"
+    "url": "git+https://github.com/LexBorisoff/filetree.git"
   },
-  "homepage": "https://github.com/LexBorisoff/fs-hooks/tree/main#readme",
+  "homepage": "https://github.com/LexBorisoff/filetree/tree/main#readme",
   "bugs": {
-    "url": "https://github.com/LexBorisoff/fs-hooks/issues"
+    "url": "https://github.com/LexBorisoff/filetree/issues"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
