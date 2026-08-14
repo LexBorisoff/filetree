@@ -16,7 +16,7 @@
     "skipLibCheck": true,
     "paths": {
       "@app-types/*": ["./src/types/*"],
-      "@core-hooks/*": ["./src/core-hooks/*"],
+      "@core-actions/*": ["./src/core-actions/*"],
       "@errors/*": ["./src/errors/*"],
       "@utils/*": ["./src/utils/*"]
     }

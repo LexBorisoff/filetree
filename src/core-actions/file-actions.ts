@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import { getFileData } from '@utils/get-file-data.js';
 import { readFile } from '@utils/read-file.js';
 
-import { FsHooks } from '../fs-hooks.js';
+import { FileTree } from '../main.js';
 
-export const fileHooks = FsHooks.fileHooks((targetFile) => ({
+export const fileActions = FileTree.fileActions((targetFile) => ({
   /**
    * Returns the path of the target file.
    */

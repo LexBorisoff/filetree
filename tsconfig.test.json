@@ -3,7 +3,7 @@
   "compilerOptions": {
     "paths": {
       "@app-types/*": ["./src/types/*"],
-      "@core-hooks/*": ["./src/core-hooks/*"],
+      "@core-actions/*": ["./src/core-actions/*"],
       "@app/*": ["./src/*"],
       "@test-utils/*": ["./test/test-utils/*"],
       "@test-setup": ["./test/test-setup.ts"]

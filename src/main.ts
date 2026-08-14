@@ -1,12 +1,12 @@
-import { HooksError } from '@errors/hooks.error.js';
+import { ActionError } from '@errors/action.errors.js';
 
 import { buildObjectTree } from './object-tree/build-object-tree.js';
 
 import type {
-  DirHooksFn,
-  FileHooksFn,
-  HooksRecord,
-} from '@app-types/hook.types.js';
+  DirActionsFn,
+  FileActionsFn,
+  ActionsRecord,
+} from '@app-types/action.types.js';
 import type {
   DirTargetInterface,
   FileTargetInterface,
@@ -14,27 +14,27 @@ import type {
   TreeInterface,
 } from '@app-types/tree.types.js';
 
-interface HooksInterface<
-  FileHooks extends HooksRecord,
-  DirHooks extends HooksRecord,
+interface ActionsInterface<
+  FileActions extends ActionsRecord,
+  DirActions extends ActionsRecord,
 > {
-  file?: FileHooksFn<FileHooks>;
-  dir?: DirHooksFn<DirHooks>;
+  file?: FileActionsFn<FileActions>;
+  dir?: DirActionsFn<DirActions>;
 }
 
-export type HooksFn<
+export type ActionsFn<
   Tree extends TreeInterface,
-  FileHooks extends HooksRecord,
-  DirHooks extends HooksRecord,
+  FileActions extends ActionsRecord,
+  DirActions extends ActionsRecord,
 > = <TreeTarget extends FileType | TreeInterface>(
   cb: (tree: Tree) => TreeTarget,
 ) => TreeTarget extends FileType
-  ? FileHooks
+  ? FileActions
   : TreeTarget extends TreeInterface
-    ? DirHooks
+    ? DirActions
     : never;
 
-export class FsHooks<Tree extends TreeInterface> {
+export class FileTree<Tree extends TreeInterface> {
   #tree: Tree;
 
   #rootPath: string;
@@ -52,24 +52,24 @@ export class FsHooks<Tree extends TreeInterface> {
     return this.#rootPath;
   }
 
-  useHooks<FileHooks extends HooksRecord, DirHooks extends HooksRecord>({
+  use<FileActions extends ActionsRecord, DirActions extends ActionsRecord>({
     file,
     dir,
-  }: HooksInterface<FileHooks, DirHooks> = {}): HooksFn<
+  }: ActionsInterface<FileActions, DirActions> = {}): ActionsFn<
     Tree,
-    FileHooks,
-    DirHooks
+    FileActions,
+    DirActions
   > {
-    type Hooks = HooksFn<Tree, FileHooks, DirHooks>;
-    type HooksCb = Parameters<Hooks>[0];
-    type HooksResult = ReturnType<Hooks> | undefined;
+    type Actions = ActionsFn<Tree, FileActions, DirActions>;
+    type ActionsCb = Parameters<Actions>[0];
+    type ActionsResult = ReturnType<Actions> | undefined;
     type TreeTarget = FileType | TreeInterface;
     type TargetObject = FileTargetInterface | DirTargetInterface<TreeInterface>;
 
     const objectTree = buildObjectTree(this.#rootPath, this.#tree);
     const tree = this.#tree;
 
-    function getTarget(cb: HooksCb): {
+    function getTarget(cb: ActionsCb): {
       target: TreeTarget;
       targetObject: TargetObject;
     } {
@@ -102,7 +102,7 @@ export class FsHooks<Tree extends TreeInterface> {
       return { target, targetObject };
     }
 
-    function hooks(cb: HooksCb): HooksResult {
+    function actions(cb: ActionsCb): ActionsResult {
       const { target, targetObject } = getTarget(cb);
       const { path } = targetObject;
 
@@ -115,22 +115,22 @@ export class FsHooks<Tree extends TreeInterface> {
         return dir?.({ type: 'dir', children, path });
       }
 
-      throw new HooksError('Invalid tree target');
+      throw new ActionError('Invalid tree target');
     }
 
-    return hooks as Hooks;
+    return actions as Actions;
   }
 
-  static fileHooks<
-    FileHooks extends HooksRecord,
-    Fn extends FileHooksFn<FileHooks>,
+  static fileActions<
+    FileActions extends ActionsRecord,
+    Fn extends FileActionsFn<FileActions>,
   >(fn: Fn): Fn {
     return fn;
   }
 
-  static dirHooks<
-    DirHooks extends HooksRecord,
-    Fn extends DirHooksFn<DirHooks>,
+  static dirActions<
+    DirActions extends ActionsRecord,
+    Fn extends DirActionsFn<DirActions>,
   >(fn: Fn): Fn {
     return fn;
   }
