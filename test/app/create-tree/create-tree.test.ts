@@ -14,7 +14,7 @@ import {
 
 import { createTree } from '@app/create-tree/create-tree.js';
 import { CreateTreeError } from '@app/errors/create-tree.error.js';
-import { FsHooks } from '@app/fs-hooks.js';
+import { FileTree } from '@app/main.js';
 import * as createDir from '@app/utils/create-dir.js';
 import { testSetup } from '@test-setup';
 import { deleteDir } from '@test-utils/delete-dir.js';
@@ -26,7 +26,7 @@ import type { TreeInterface } from '@app-types/tree.types.js';
 const { setup, joinPath } = testSetup('create-files', import.meta);
 
 enum CreateFilesTest {
-  FsHooksObject = 'fs-hooks-object',
+  FileTreeObject = 'file-tree-object',
   ErrorHandling = 'error-handling',
 }
 
@@ -39,14 +39,14 @@ suite('createTree function', { concurrent: false }, () => {
     getDescribePath = (...args) => joinPath(testName, ...args);
   }
 
-  describe('create files based on an FsHooks object', () => {
-    describeSetup(CreateFilesTest.FsHooksObject);
+  describe('create files based on an FileTree object', () => {
+    describeSetup(CreateFilesTest.FileTreeObject);
     const describePath = getDescribePath();
     const pathArray = getPathArray(describePath, tree);
 
     beforeEach(() => {
-      const fsHooks = new FsHooks(describePath, tree);
-      createTree(fsHooks);
+      const fileTree = new FileTree(describePath, tree);
+      createTree(fileTree);
     });
 
     afterEach(() => {
@@ -93,10 +93,10 @@ suite('createTree function', { concurrent: false }, () => {
     describeSetup(CreateFilesTest.ErrorHandling);
     const describePath = getDescribePath();
     const rootPath = getDescribePath('root-path');
-    let fsHooks: FsHooks<TreeInterface>;
+    let fileTree: FileTree<TreeInterface>;
 
     beforeEach(() => {
-      fsHooks = new FsHooks(rootPath, tree);
+      fileTree = new FileTree(rootPath, tree);
       fs.mkdirSync(describePath, { recursive: true });
     });
 
@@ -110,7 +110,7 @@ suite('createTree function', { concurrent: false }, () => {
     it('should return error when root directory path is a file', () => {
       fs.writeFileSync(rootPath, '');
 
-      const errors = createTree(fsHooks);
+      const errors = createTree(fileTree);
       expect(errors.length).toBe(1);
       expect(errors.at(0)).toBeInstanceOf(CreateTreeError);
       expect(errors.at(0)?.type).toBe('dir');
@@ -132,9 +132,9 @@ suite('createTree function', { concurrent: false }, () => {
         });
       }
 
-      traverse(fsHooks.tree, fsHooks.rootPath);
+      traverse(fileTree.tree, fileTree.rootPath);
 
-      const errors = createTree(fsHooks);
+      const errors = createTree(fileTree);
 
       expect(errors.length).toBe(dirPaths.length);
       dirPaths.forEach((dirPath, i) => {
@@ -163,9 +163,9 @@ suite('createTree function', { concurrent: false }, () => {
         });
       }
 
-      traverse(fsHooks.tree, fsHooks.rootPath);
+      traverse(fileTree.tree, fileTree.rootPath);
 
-      const errors = createTree(fsHooks);
+      const errors = createTree(fileTree);
 
       expect(errors.length).toBe(filePaths.length);
       filePaths.forEach((filePath, i) => {
@@ -184,7 +184,7 @@ suite('createTree function', { concurrent: false }, () => {
         throw error;
       });
 
-      expect(() => createTree(fsHooks)).toThrow(error);
+      expect(() => createTree(fileTree)).toThrow(error);
 
       // throw on the second call to createDir
       vi.spyOn(createDir, 'createDir')
@@ -193,7 +193,7 @@ suite('createTree function', { concurrent: false }, () => {
           throw error;
         });
 
-      expect(() => createTree(fsHooks)).toThrow(error);
+      expect(() => createTree(fileTree)).toThrow(error);
     });
   });
 });
