@@ -2,23 +2,23 @@ import fs from 'node:fs';
 
 import { beforeAll, beforeEach, expect, it, suite, vi } from 'vitest';
 
-import { FsHooks } from '@app/fs-hooks.js';
-import { coreHooks } from '@core-hooks/core-hooks.js';
+import { FileTree } from '@app/main.js';
+import { coreActions } from '@core-actions/core-actions.js';
 import { testSetup } from '@test-setup';
 
 import { anyFunction } from './any-function.js';
-import { TestEnum } from './test.enum.js';
-import { NEW_DIR_NAME } from './use-dirs.js';
+import { NEW_DIR_NAME } from './dir-actions.js';
 import {
-  getUseFiles,
+  getTestFileActions,
   NEW_FILE_DATA,
   NEW_FILE_NAME,
-  type UseFilesFn,
-} from './use-files.js';
+  type TestFileActionsFn,
+} from './file-actions.js';
+import { TestEnum } from './test.enum.js';
 
 import type { FileInfo } from './get-files-info.js';
-import type { CoreHooks } from '@app-types/core-hooks.types.js';
 import type { TreeInterface } from '@app-types/tree.types.js';
+import type { CoreActionsType } from '@core-actions/core-actions.types.js';
 
 const { setup, testPath } = testSetup(TestEnum.UseFiles, import.meta);
 
@@ -38,61 +38,61 @@ const tree = {
 } satisfies TreeInterface;
 
 interface FileInterface extends FileInfo {
-  fileHooks: CoreHooks['file'];
-  dirHooks: CoreHooks['dir'];
+  fileActions: CoreActionsType['file'];
+  dirActions: CoreActionsType['dir'];
 }
 
-suite('getUseFiles function', () => {
+suite('getTestFileActions function', () => {
   beforeAll(() => setup());
 
-  let fsHooks: FsHooks<typeof tree>;
+  let fileTree: FileTree<typeof tree>;
   let files: FileInterface[];
-  let useFiles: UseFilesFn;
+  let testFileActions: TestFileActionsFn;
 
   beforeEach(() => {
-    fsHooks = new FsHooks(testPath, tree);
-    useFiles = getUseFiles(fsHooks);
-    const hooks = fsHooks.useHooks(coreHooks);
+    fileTree = new FileTree(testPath, tree);
+    testFileActions = getTestFileActions(fileTree);
+    const actions = fileTree.use(coreActions);
 
     files = [
       {
-        fileHooks: hooks((root) => root.file1),
-        dirHooks: hooks((root) => root),
+        fileActions: actions((root) => root.file1),
+        dirActions: actions((root) => root),
         fileData: tree.file1,
         fileName: 'file1',
         pathDirs: [],
       },
       {
-        fileHooks: hooks((root) => root.file2),
-        dirHooks: hooks((root) => root),
+        fileActions: actions((root) => root.file2),
+        dirActions: actions((root) => root),
         fileData: tree.file2,
         fileName: 'file2',
         pathDirs: [],
       },
       {
-        fileHooks: hooks((root) => root.dir2.file3),
-        dirHooks: hooks((root) => root.dir2),
+        fileActions: actions((root) => root.dir2.file3),
+        dirActions: actions((root) => root.dir2),
         fileData: tree.dir2.file3,
         fileName: 'file3',
         pathDirs: ['dir2'],
       },
       {
-        fileHooks: hooks((root) => root.dir2.file4),
-        dirHooks: hooks((root) => root.dir2),
+        fileActions: actions((root) => root.dir2.file4),
+        dirActions: actions((root) => root.dir2),
         fileData: tree.dir2.file4,
         fileName: 'file4',
         pathDirs: ['dir2'],
       },
       {
-        fileHooks: hooks((root) => root.dir2.dir4.file5),
-        dirHooks: hooks((root) => root.dir2.dir4),
+        fileActions: actions((root) => root.dir2.dir4.file5),
+        dirActions: actions((root) => root.dir2.dir4),
         fileData: tree.dir2.dir4.file5,
         fileName: 'file5',
         pathDirs: ['dir2', 'dir4'],
       },
       {
-        fileHooks: hooks((root) => root.dir2.dir4.file6),
-        dirHooks: hooks((root) => root.dir2.dir4),
+        fileActions: actions((root) => root.dir2.dir4.file6),
+        dirActions: actions((root) => root.dir2.dir4),
         fileData: tree.dir2.dir4.file6,
         fileName: 'file6',
         pathDirs: ['dir2', 'dir4'],
@@ -101,25 +101,25 @@ suite('getUseFiles function', () => {
   });
 
   it('should be a function', () => {
-    expect(useFiles).toBeTypeOf('function');
+    expect(testFileActions).toBeTypeOf('function');
   });
 
   it('should call the callback', () => {
     function treeFileParams(index: number): [object, FileInfo] {
-      const { fileHooks, fileData, fileName, pathDirs } = files[index];
+      const { fileActions, fileData, fileName, pathDirs } = files[index];
       const info: FileInfo = {
         fileName,
         fileData,
         pathDirs,
       };
-      return [anyFunction(fileHooks), info];
+      return [anyFunction(fileActions), info];
     }
 
     /**
      * File created with fileCreate on tree directires
      */
     function createdFileParams1(index: number): [object, FileInfo] | [] {
-      const { dirHooks, pathDirs } = files[index];
+      const { dirActions, pathDirs } = files[index];
       const info: FileInfo = {
         fileData: NEW_FILE_DATA,
         fileName: NEW_FILE_NAME,
@@ -127,11 +127,11 @@ suite('getUseFiles function', () => {
       };
 
       // create the tree directory
-      const treeDir = dirHooks.getPath();
+      const treeDir = dirActions.getPath();
       fs.mkdirSync(treeDir, { recursive: true });
 
       // create the new file
-      const createdFile = dirHooks.fileCreate(NEW_FILE_NAME, NEW_FILE_DATA);
+      const createdFile = dirActions.fileCreate(NEW_FILE_NAME, NEW_FILE_DATA);
 
       // delete the tree directory
       fs.rmSync(treeDir, {
@@ -146,7 +146,7 @@ suite('getUseFiles function', () => {
      * File created with dirCreated + fileCreate combination
      */
     function createdFileParams2(index: number): [object, FileInfo] | [] {
-      const { dirHooks, pathDirs } = files[index];
+      const { dirActions, pathDirs } = files[index];
       const info: FileInfo = {
         fileData: NEW_FILE_DATA,
         fileName: NEW_FILE_NAME,
@@ -154,11 +154,11 @@ suite('getUseFiles function', () => {
       };
 
       // create the tree directory
-      const treeDir = dirHooks.getPath();
+      const treeDir = dirActions.getPath();
       fs.mkdirSync(treeDir, { recursive: true });
 
       // create the new directory
-      const createdDir = dirHooks.dirCreate(NEW_DIR_NAME);
+      const createdDir = dirActions.dirCreate(NEW_DIR_NAME);
 
       if (createdDir) {
         // create the new file
@@ -180,7 +180,7 @@ suite('getUseFiles function', () => {
     const numOfFiles = files.length;
     const callsPerFile = 3;
 
-    useFiles(cb);
+    testFileActions(cb);
     expect(cb).toHaveBeenCalledTimes(numOfFiles * callsPerFile);
 
     let callNum = 1;

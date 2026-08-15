@@ -12,27 +12,12 @@ concurrency:
 jobs:
   release:
     name: Release
-    runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
       issues: write
       id-token: write # enable use of OIDC for trusted publishing and npm provenance
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-      - name: Install dependencies
-        run: npm clean-install
-      - name: Verify the integrity of provenance attestations and registry signatures
-        run: npm audit signatures
-      - name: Build the application
-        run: npm run build
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+    uses: LexBorisoff/workflows/.github/workflows/release.yml@main
 
   sync-dev:
     name: Sync main to dev

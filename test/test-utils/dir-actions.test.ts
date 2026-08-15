@@ -1,19 +1,19 @@
 import { beforeAll, beforeEach, expect, it, suite, vi } from 'vitest';
 
-import { FsHooks } from '@app/fs-hooks.js';
-import { coreHooks } from '@core-hooks/core-hooks.js';
+import { FileTree } from '@app/main.js';
+import { coreActions } from '@core-actions/core-actions.js';
 import { testSetup } from '@test-setup';
 import { anyFunction } from '@test-utils/any-function.js';
 import {
-  getUseDirs,
+  getTestDirActions,
   NEW_DIR_NAME,
-  type UseDirsFn,
-} from '@test-utils/use-dirs.js';
+  type TestDirActionsFn,
+} from '@test-utils/dir-actions.js';
 
 import { TestEnum } from './test.enum.js';
 
-import type { CoreHooks } from '@app-types/core-hooks.types.js';
 import type { TreeInterface } from '@app-types/tree.types.js';
+import type { CoreActionsType } from '@core-actions/core-actions.types.js';
 import type { DirInfo } from '@test-utils/get-dirs-info.js';
 
 const { setup, testPath } = testSetup(TestEnum.UseDirs, import.meta);
@@ -35,54 +35,54 @@ const tree = {
 } satisfies TreeInterface;
 
 interface DirInterface extends DirInfo {
-  dirHooks: CoreHooks['dir'];
+  dirActions: CoreActionsType['dir'];
 }
 
-suite('getUseDirs function', () => {
+suite('getTestDirActions function', () => {
   beforeAll(() => setup());
 
-  let fsHooks: FsHooks<typeof tree>;
+  let fileTree: FileTree<typeof tree>;
   let dirs: DirInterface[];
-  let useDirs: UseDirsFn;
+  let testDirActions: TestDirActionsFn;
 
   beforeEach(() => {
-    fsHooks = new FsHooks(testPath, tree);
-    useDirs = getUseDirs(fsHooks);
-    const hooks = fsHooks.useHooks(coreHooks);
+    fileTree = new FileTree(testPath, tree);
+    testDirActions = getTestDirActions(fileTree);
+    const actions = fileTree.use(coreActions);
 
     dirs = [
       {
-        dirHooks: hooks((root) => root),
+        dirActions: actions((root) => root),
         children: ['file1', 'dir1', 'dir2'],
         pathDirs: [],
       },
       {
-        dirHooks: hooks((root) => root.dir1),
+        dirActions: actions((root) => root.dir1),
         children: [],
         pathDirs: ['dir1'],
       },
       {
-        dirHooks: hooks((root) => root.dir2),
+        dirActions: actions((root) => root.dir2),
         children: ['file2', 'dir3', 'dir4'],
         pathDirs: ['dir2'],
       },
       {
-        dirHooks: hooks((root) => root.dir2.dir3),
+        dirActions: actions((root) => root.dir2.dir3),
         children: [],
         pathDirs: ['dir2', 'dir3'],
       },
       {
-        dirHooks: hooks((root) => root.dir2.dir4),
+        dirActions: actions((root) => root.dir2.dir4),
         children: ['file3', 'dir5', 'dir6'],
         pathDirs: ['dir2', 'dir4'],
       },
       {
-        dirHooks: hooks((root) => root.dir2.dir4.dir5),
+        dirActions: actions((root) => root.dir2.dir4.dir5),
         children: [],
         pathDirs: ['dir2', 'dir4', 'dir5'],
       },
       {
-        dirHooks: hooks((root) => root.dir2.dir4.dir6),
+        dirActions: actions((root) => root.dir2.dir4.dir6),
         children: ['file4'],
         pathDirs: ['dir2', 'dir4', 'dir6'],
       },
@@ -90,23 +90,23 @@ suite('getUseDirs function', () => {
   });
 
   it('should be a function', () => {
-    expect(useDirs).toBeTypeOf('function');
+    expect(testDirActions).toBeTypeOf('function');
   });
 
   it('should call the callback', () => {
     function treeDirParams(index: number): [object, DirInfo] {
-      const { dirHooks, ...rest } = dirs[index];
-      return [anyFunction(dirHooks), rest];
+      const { dirActions, ...rest } = dirs[index];
+      return [anyFunction(dirActions), rest];
     }
 
     function createdDirParams(index: number): [object, DirInfo] {
-      const { dirHooks, pathDirs } = dirs[index];
+      const { dirActions, pathDirs } = dirs[index];
       const info: DirInfo = {
         children: [],
         pathDirs: pathDirs.concat(NEW_DIR_NAME),
       };
 
-      const createdDir = dirHooks.dirCreate(NEW_DIR_NAME);
+      const createdDir = dirActions.dirCreate(NEW_DIR_NAME);
       return [anyFunction(createdDir || {}), info];
     }
 
@@ -114,7 +114,7 @@ suite('getUseDirs function', () => {
     const numOfDirs = dirs.length;
     const callsPerDir = 2;
 
-    useDirs(cb);
+    testDirActions(cb);
     expect(cb).toHaveBeenCalledTimes(numOfDirs * callsPerDir);
 
     let callNum = 1;

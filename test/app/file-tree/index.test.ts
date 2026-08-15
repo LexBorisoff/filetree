@@ -1,10 +1,11 @@
 import { expect, test } from 'vitest';
 
-import { coreHooks } from '@core-hooks/core-hooks.js';
-import * as index from '@core-hooks/index.js';
+import { createTree } from '@app/create-tree/create-tree.js';
+import * as index from '@app/index.js';
+import { FileTree } from '@app/main.js';
 
-test('core hooks index file', () => {
-  const values = [coreHooks];
+test('file manager index file', () => {
+  const values = [FileTree, createTree];
 
   values.forEach((value) => {
     expect(Object.values(index).includes(value)).toBe(true);

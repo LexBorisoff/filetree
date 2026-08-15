@@ -1,4 +1,4 @@
-export class HooksError extends Error {
+export class ActionError extends Error {
   constructor(message: string) {
     super(message);
   }
