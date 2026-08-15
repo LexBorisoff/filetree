@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, suite } from 'vitest';
 
-import { FsHooks } from '@app/fs-hooks.js';
+import { FileTree } from '@app/main.js';
 import { testSetup } from '@test-setup';
 import { getFilesInfo } from '@test-utils/get-files-info.js';
 
@@ -24,14 +24,14 @@ const tree = {
 } satisfies TreeInterface;
 
 suite('getFilesInfo function', () => {
-  let fsHooks: FsHooks<typeof tree>;
+  let fileTree: FileTree<typeof tree>;
 
   beforeEach(() => {
-    fsHooks = new FsHooks(testPath, tree);
+    fileTree = new FileTree(testPath, tree);
   });
 
   it('should return files information array', () => {
-    const files = getFilesInfo(fsHooks);
+    const files = getFilesInfo(fileTree);
     const filesInfo = [
       {
         fileName: 'file1',

@@ -4,10 +4,12 @@ import path from 'node:path';
 import { CreateTreeError } from '@errors/create-tree.error.js';
 import { createDir } from '@utils/create-dir.js';
 
-import type { FsHooks } from '../fs-hooks.js';
+import type { FileTree } from '../main.js';
 import type { TreeInterface } from '@app-types/tree.types.js';
 
-export function createTree(fsHooks: FsHooks<TreeInterface>): CreateTreeError[] {
+export function createTree(
+  fileTree: FileTree<TreeInterface>,
+): CreateTreeError[] {
   const errors: CreateTreeError[] = [];
 
   function traverse(parentPath: string, currentTree: TreeInterface): void {
@@ -49,7 +51,7 @@ export function createTree(fsHooks: FsHooks<TreeInterface>): CreateTreeError[] {
   }
 
   try {
-    const { rootPath, tree } = fsHooks;
+    const { rootPath, tree } = fileTree;
 
     createDir(rootPath);
     traverse(rootPath, tree);

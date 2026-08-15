@@ -5,16 +5,16 @@ import { createDir } from '@utils/create-dir.js';
 import { getFileData } from '@utils/get-file-data.js';
 import { readFile } from '@utils/read-file.js';
 
-import { FsHooks } from '../fs-hooks.js';
+import { FileTree } from '../main.js';
 
-import { fileHooks } from './file-hooks.js';
+import { fileActions } from './file-actions.js';
 
 import type {
   DirTargetInterface,
   TreeInterface,
 } from '@app-types/tree.types.js';
 
-export const dirHooks = FsHooks.dirHooks((targetDir) => {
+export const dirActions = FileTree.dirActions((targetDir) => {
   function getPath(name: string): string {
     return path.resolve(targetDir.path, name);
   }
@@ -47,15 +47,15 @@ export const dirHooks = FsHooks.dirHooks((targetDir) => {
      * @param recursive indicates whether parent folders should be created
      *
      * @returns
-     * - The created directory hooks
-     * - The directory hooks if the directory already exists
+     * - Created directory's actions
+     * - Directory's actions if the directory already exists
      * - `false` if the directory could not be created
      *
      */
     dirCreate(
       dirName: string,
       recursive = false,
-    ): ReturnType<typeof dirHooks> | false {
+    ): ReturnType<typeof dirActions> | false {
       const dirPath = getPath(dirName);
       const createdDir: DirTargetInterface<TreeInterface> = {
         type: 'dir',
@@ -64,7 +64,7 @@ export const dirHooks = FsHooks.dirHooks((targetDir) => {
       };
 
       if (exists(dirName)) {
-        return dirHooks(createdDir);
+        return dirActions(createdDir);
       }
 
       try {
@@ -73,7 +73,7 @@ export const dirHooks = FsHooks.dirHooks((targetDir) => {
         return false;
       }
 
-      return dirHooks(createdDir);
+      return dirActions(createdDir);
     },
 
     /**
@@ -97,21 +97,21 @@ export const dirHooks = FsHooks.dirHooks((targetDir) => {
      * @param data data string to write. If this argument is provided and the file already exists, the file will be overwritten
      *
      * @returns
-     * - The created file hooks
-     * - The file hooks if it already exists
+     * - Created file's actions
+     * - File's actions if it already exists
      * - `false` if the file could not be created
      */
     fileCreate(
       fileName: string,
       data: unknown = '',
-    ): ReturnType<typeof fileHooks> | false {
+    ): ReturnType<typeof fileActions> | false {
       try {
         this.fileWrite(fileName, data);
       } catch {
         return false;
       }
 
-      return fileHooks({
+      return fileActions({
         type: 'file',
         path: getPath(fileName),
       });

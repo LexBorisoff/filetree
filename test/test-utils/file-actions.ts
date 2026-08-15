@@ -1,25 +1,30 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { coreHooks } from '@core-hooks/core-hooks.js';
+import { coreActions } from '@core-actions/core-actions.js';
 
+import { NEW_DIR_NAME } from './dir-actions.js';
 import { getFilesInfo, type FileInfo } from './get-files-info.js';
-import { NEW_DIR_NAME } from './use-dirs.js';
 
-import type { FsHooks } from '@app/fs-hooks.js';
+import type { FileTree } from '@app/main.js';
 import type { TreeInterface } from '@app-types/tree.types.js';
-import type { CoreHooks } from '@core-hooks/core-hooks.types.js';
+import type { CoreActionsType } from '@core-actions/core-actions.types.js';
 
-type UseFilesCb = (hooks: CoreHooks['file'], file: FileInfo) => void;
+type TestFileActionsCb = (
+  actions: CoreActionsType['file'],
+  file: FileInfo,
+) => void;
 
-export type UseFilesFn = (cb: UseFilesCb) => void;
+export type TestFileActionsFn = (cb: TestFileActionsCb) => void;
 
 export const NEW_FILE_NAME = 'new-file';
 export const NEW_FILE_DATA = 'new file data';
 
-export function getUseFiles(fsHooks: FsHooks<TreeInterface>): UseFilesFn {
-  const files = getFilesInfo(fsHooks);
-  const hooks = fsHooks.useHooks(coreHooks);
+export function getTestFileActions(
+  fileTree: FileTree<TreeInterface>,
+): TestFileActionsFn {
+  const files = getFilesInfo(fileTree);
+  const actions = fileTree.use(coreActions);
 
   /**
    * Types of files for testing:
@@ -27,17 +32,17 @@ export function getUseFiles(fsHooks: FsHooks<TreeInterface>): UseFilesFn {
    * 2. created with fileCreate on tree directories
    * 3. created with dirCreate + fileCreate combination
    */
-  return function useFiles(cb) {
+  return function testFileActions(cb) {
     files.forEach((fileInfo) => {
       const { pathDirs, fileName } = fileInfo;
-      const dirPath = path.resolve(fsHooks.rootPath, ...pathDirs);
+      const dirPath = path.resolve(fileTree.rootPath, ...pathDirs);
 
       fs.mkdirSync(dirPath, { recursive: true });
 
       /**
        * Test file from the tree
        */
-      const fileHooks = hooks((root) => {
+      const fileActions = actions((root) => {
         let currentDir: TreeInterface = root;
 
         pathDirs.forEach((dirName) => {
@@ -52,12 +57,12 @@ export function getUseFiles(fsHooks: FsHooks<TreeInterface>): UseFilesFn {
         return currentDir[fileName] as string;
       });
 
-      cb(fileHooks, fileInfo);
+      cb(fileActions, fileInfo);
 
       /**
        * Tree directory
        */
-      const dirHooks = hooks((root) => {
+      const dirActions = actions((root) => {
         let currentDir: TreeInterface = root;
 
         pathDirs.forEach((dirName) => {
@@ -75,7 +80,7 @@ export function getUseFiles(fsHooks: FsHooks<TreeInterface>): UseFilesFn {
       /**
        * Test file created with fileCreate on a tree directory
        */
-      const createdFile1 = dirHooks.fileCreate(NEW_FILE_NAME, NEW_FILE_DATA);
+      const createdFile1 = dirActions.fileCreate(NEW_FILE_NAME, NEW_FILE_DATA);
       if (createdFile1) {
         cb(createdFile1, {
           fileName: NEW_FILE_NAME,
@@ -87,7 +92,7 @@ export function getUseFiles(fsHooks: FsHooks<TreeInterface>): UseFilesFn {
       /**
        * Test file created with dirCreate + fileCreate combination
        */
-      const createdDir = dirHooks.dirCreate(NEW_DIR_NAME, true);
+      const createdDir = dirActions.dirCreate(NEW_DIR_NAME, true);
       if (createdDir) {
         const createdFile2 = createdDir.fileCreate(
           NEW_FILE_NAME,
