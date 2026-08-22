@@ -55,22 +55,36 @@ function isTreeTargetArray(
   return Array.isArray(target);
 }
 
+interface CreateProxyTreeOptions {
+  rootTree: TreeInterface;
+  targetObjects: TargetObject[];
+  index?: number;
+}
+
 function createProxyTree<T extends TreeInterface>(
   targetTree: T,
   targetObjectTree: DirTargetInterface<T>,
-  targetObjects: TargetObject[],
+  { rootTree, targetObjects, index = -1 }: CreateProxyTreeOptions,
 ): T {
   return new Proxy(targetTree, {
     get(obj, prop: string) {
+      // when root tree is accessed, a new target object should be added
+      // to targetObjects array to enable working with tuple of targets
+      // returned from actions callback
+      if (rootTree === targetTree) index++;
       const targetObject = targetObjectTree.children[prop];
-      targetObjects.push(targetObject);
+      targetObjects[index] = targetObject;
 
       if (
         typeof obj[prop] === 'object' &&
         obj[prop] != null &&
         targetObject.type === 'dir'
       ) {
-        return createProxyTree(obj[prop], targetObject, targetObjects);
+        return createProxyTree(obj[prop], targetObject, {
+          index,
+          rootTree,
+          targetObjects,
+        });
       }
 
       return Reflect.get(obj, prop);
@@ -109,15 +123,29 @@ export class FileTree<Tree extends TreeInterface> {
     type ActionsReturn = FileActions | DirActions | null;
 
     const objectTree = buildObjectTree(this.#rootPath, this.#tree);
-    const tree = this.#tree;
+    const rootTree = this.#tree;
 
     function getTargets(cb: ActionsCb): {
       targets: TreeTarget | readonly TreeTarget[];
       targetObjects: TargetObject[];
     } {
       const targetObjects: TargetObject[] = [objectTree];
-      const proxyTree = createProxyTree(tree, objectTree, targetObjects);
+      const proxyTree = createProxyTree(rootTree, objectTree, {
+        rootTree,
+        targetObjects,
+      });
+
       const targets = cb(proxyTree);
+
+      // when tree root is returned from actions callback, proxyTree cannot intercept it,
+      // thus root object tree must be manually inserted into targetObjects at target's index
+      if (isTreeTargetArray(targets)) {
+        targets.forEach((target, i) => {
+          if (target === proxyTree) {
+            targetObjects.splice(i, 0, objectTree);
+          }
+        });
+      }
 
       return { targets, targetObjects };
     }
