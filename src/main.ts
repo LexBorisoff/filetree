@@ -113,7 +113,7 @@ export class FileTree<Tree extends TreeInterface> {
   use<FileActions extends ActionsRecord, DirActions extends ActionsRecord>({
     file,
     dir,
-  }: ActionsInterface<FileActions, DirActions> = {}): ActionsFn<
+  }: ActionsInterface<FileActions, DirActions>): ActionsFn<
     Tree,
     FileActions,
     DirActions
