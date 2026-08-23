@@ -46,13 +46,7 @@ export function getTestFileActions(
         let currentDir: TreeInterface = root;
 
         pathDirs.forEach((dirName) => {
-          const dir = currentDir[dirName];
-          if (
-            Object.keys(currentDir).includes(dirName) &&
-            typeof dir === 'object'
-          ) {
-            currentDir = dir;
-          }
+          currentDir = currentDir[dirName] as TreeInterface;
         });
 
         return currentDir[fileName] as string;
@@ -67,13 +61,7 @@ export function getTestFileActions(
         let currentDir: TreeInterface = root;
 
         pathDirs.forEach((dirName) => {
-          const dir = currentDir[dirName];
-          if (
-            Object.keys(currentDir).includes(dirName) &&
-            typeof dir === 'object'
-          ) {
-            currentDir = dir;
-          }
+          currentDir = currentDir[dirName] as TreeInterface;
         });
 
         return currentDir;
