@@ -1,5 +1,3 @@
-import { ActionError } from '@errors/action.errors.js';
-
 import { buildObjectTree } from './object-tree/build-object-tree.js';
 
 import type {
@@ -22,17 +20,77 @@ interface ActionsInterface<
   dir?: DirActionsFn<DirActions>;
 }
 
+type TreeTarget = FileType | TreeInterface;
+type TargetObject = FileTargetInterface | DirTargetInterface<TreeInterface>;
+
+type MapActions<
+  T extends readonly TreeTarget[],
+  FileActions extends ActionsRecord,
+  DirActions extends ActionsRecord,
+> = {
+  [K in keyof T]: T[K] extends FileType
+    ? FileActions
+    : T[K] extends TreeInterface
+      ? DirActions
+      : never;
+};
+
 export type ActionsFn<
   Tree extends TreeInterface,
   FileActions extends ActionsRecord,
   DirActions extends ActionsRecord,
-> = <TreeTarget extends FileType | TreeInterface>(
-  cb: (tree: Tree) => TreeTarget,
-) => TreeTarget extends FileType
+> = <const TreeTargets extends TreeTarget | readonly TreeTarget[]>(
+  cb: (tree: Tree) => TreeTargets,
+) => TreeTargets extends FileType
   ? FileActions
-  : TreeTarget extends TreeInterface
+  : TreeTargets extends TreeInterface
     ? DirActions
-    : never;
+    : TreeTargets extends readonly TreeTarget[]
+      ? MapActions<TreeTargets, FileActions, DirActions>
+      : never;
+
+function isTreeTargetArray(
+  target: TreeTarget | readonly TreeTarget[],
+): target is readonly TreeTarget[] {
+  return Array.isArray(target);
+}
+
+interface CreateProxyTreeOptions {
+  rootTree: TreeInterface;
+  targetObjects: TargetObject[];
+  index?: number;
+}
+
+function createProxyTree<T extends TreeInterface>(
+  targetTree: T,
+  targetObjectTree: DirTargetInterface<T>,
+  { rootTree, targetObjects, index = -1 }: CreateProxyTreeOptions,
+): T {
+  return new Proxy(targetTree, {
+    get(obj, prop: string) {
+      // when root tree is accessed, a new target object should be added
+      // to targetObjects array to enable working with tuple of targets
+      // returned from actions callback
+      if (rootTree === targetTree) index++;
+      const targetObject = targetObjectTree.children[prop];
+      targetObjects[index] = targetObject;
+
+      if (
+        typeof obj[prop] === 'object' &&
+        obj[prop] != null &&
+        targetObject.type === 'dir'
+      ) {
+        return createProxyTree(obj[prop], targetObject, {
+          index,
+          rootTree,
+          targetObjects,
+        });
+      }
+
+      return Reflect.get(obj, prop);
+    },
+  });
+}
 
 export class FileTree<Tree extends TreeInterface> {
   #tree: Tree;
@@ -61,61 +119,71 @@ export class FileTree<Tree extends TreeInterface> {
     DirActions
   > {
     type Actions = ActionsFn<Tree, FileActions, DirActions>;
-    type ActionsCb = Parameters<Actions>[0];
-    type ActionsResult = ReturnType<Actions> | undefined;
-    type TreeTarget = FileType | TreeInterface;
-    type TargetObject = FileTargetInterface | DirTargetInterface<TreeInterface>;
+    type ActionsCb = (tree: Tree) => TreeTarget | readonly TreeTarget[];
+    type ActionsReturn = FileActions | DirActions | null;
 
     const objectTree = buildObjectTree(this.#rootPath, this.#tree);
-    const tree = this.#tree;
+    const rootTree = this.#tree;
 
-    function getTarget(cb: ActionsCb): {
-      target: TreeTarget;
-      targetObject: TargetObject;
+    function getTargets(cb: ActionsCb): {
+      targets: TreeTarget | readonly TreeTarget[];
+      targetObjects: TargetObject[];
     } {
-      let targetObject: TargetObject = objectTree;
+      const targetObjects: TargetObject[] = [objectTree];
+      const proxyTree = createProxyTree(rootTree, objectTree, {
+        rootTree,
+        targetObjects,
+      });
 
-      function createProxyTree<T extends TreeInterface>(
-        targetTree: T,
-        targetObjectTree: DirTargetInterface<T>,
-      ): T {
-        return new Proxy(targetTree, {
-          get(obj, prop: string) {
-            targetObject = targetObjectTree.children[prop];
+      const targets = cb(proxyTree);
 
-            if (
-              typeof obj[prop] === 'object' &&
-              obj[prop] != null &&
-              targetObject.type === 'dir'
-            ) {
-              return createProxyTree(obj[prop], targetObject);
-            }
-
-            return Reflect.get(obj, prop);
-          },
+      // when tree root is returned from actions callback, proxyTree cannot intercept it,
+      // thus root object tree must be manually inserted into targetObjects at target's index
+      if (isTreeTargetArray(targets)) {
+        targets.forEach((target, i) => {
+          if (target === proxyTree) {
+            targetObjects.splice(i, 0, objectTree);
+          }
         });
       }
 
-      const proxyTree = createProxyTree(tree, objectTree);
-      const target = cb(proxyTree);
-
-      return { target, targetObject };
+      return { targets, targetObjects };
     }
 
-    function actions(cb: ActionsCb): ActionsResult {
-      const { target, targetObject } = getTarget(cb);
-      const { path } = targetObject;
+    function actions(cb: ActionsCb): ActionsReturn | ActionsReturn[] {
+      const { targets, targetObjects } = getTargets(cb);
 
-      if (typeof target === 'string' && targetObject.type === 'file') {
-        return file?.({ type: 'file', path });
+      if (isTreeTargetArray(targets)) {
+        return targets.map((target, i) => {
+          const targetObject = targetObjects[i];
+          const { path, type } = targetObject;
+
+          if (typeof target === 'string' && type === 'file') {
+            return file?.({ type: 'file', path }) ?? null;
+          }
+
+          if (typeof target === 'object' && type === 'dir') {
+            const { children } = targetObject;
+            return dir?.({ type: 'dir', children, path }) ?? null;
+          }
+
+          return null;
+        });
       }
 
-      if (typeof target === 'object' && targetObject.type === 'dir') {
+      const [targetObject] = targetObjects;
+      const { path, type } = targetObject;
+
+      if (typeof targets === 'string' && type === 'file') {
+        return file?.({ type: 'file', path }) ?? null;
+      }
+
+      if (typeof targets === 'object' && type === 'dir') {
         const { children } = targetObject;
-        return dir?.({ type: 'dir', children, path });
+        return dir?.({ type: 'dir', children, path }) ?? null;
       }
 
-      throw new ActionError('Invalid tree target');
+      return null;
     }
 
     return actions as Actions;
