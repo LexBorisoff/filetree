@@ -55,41 +55,37 @@ function isTreeTargetArray(
   return Array.isArray(target);
 }
 
-interface CreateProxyTreeOptions {
-  rootTree: TreeInterface;
-  targetObjects: TargetObject[];
-  index?: number;
-}
+function createProxyTree<R extends TreeInterface>(
+  rootTree: R,
+  objectTree: DirTargetInterface<R>,
+): [R, TargetObject[]] {
+  let index = -1;
+  const targetObjects: TargetObject[] = [objectTree];
 
-function createProxyTree<T extends TreeInterface>(
-  targetTree: T,
-  targetObjectTree: DirTargetInterface<T>,
-  { rootTree, targetObjects, index = -1 }: CreateProxyTreeOptions,
-): T {
-  return new Proxy(targetTree, {
-    get(obj, prop: string) {
-      // when root tree is accessed, a new target object should be added
-      // to targetObjects array to enable working with tuple of targets
-      // returned from actions callback
-      if (rootTree === targetTree) index++;
-      const targetObject = targetObjectTree.children[prop];
-      targetObjects[index] = targetObject;
+  function traverse<T extends TreeInterface>(
+    targetTree: T,
+    targetObjectTree: DirTargetInterface<T>,
+  ): T {
+    return new Proxy(targetTree, {
+      get(obj, prop: string) {
+        // when root tree is accessed, a new target object should be added
+        // to targetObjects array to enable working with tuple of targets
+        // returned from actions callback
+        if (targetTree === (rootTree as TreeInterface)) index++;
+        const targetObject = targetObjectTree.children[prop];
+        targetObjects[index] = targetObject;
 
-      if (
-        typeof obj[prop] === 'object' &&
-        obj[prop] != null &&
-        targetObject.type === 'dir'
-      ) {
-        return createProxyTree(obj[prop], targetObject, {
-          index,
-          rootTree,
-          targetObjects,
-        });
-      }
+        return typeof obj[prop] === 'object' &&
+          obj[prop] != null &&
+          targetObject.type === 'dir'
+          ? traverse(obj[prop], targetObject)
+          : Reflect.get(obj, prop);
+      },
+    });
+  }
 
-      return Reflect.get(obj, prop);
-    },
-  });
+  const proxyTree = traverse(rootTree, objectTree);
+  return [proxyTree, targetObjects];
 }
 
 export class FileTree<Tree extends TreeInterface> {
@@ -129,12 +125,7 @@ export class FileTree<Tree extends TreeInterface> {
       targets: TreeTarget | readonly TreeTarget[];
       targetObjects: TargetObject[];
     } {
-      const targetObjects: TargetObject[] = [objectTree];
-      const proxyTree = createProxyTree(rootTree, objectTree, {
-        rootTree,
-        targetObjects,
-      });
-
+      const [proxyTree, targetObjects] = createProxyTree(rootTree, objectTree);
       const targets = cb(proxyTree);
 
       // when tree root is returned from actions callback, proxyTree cannot intercept it,
