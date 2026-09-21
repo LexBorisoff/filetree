@@ -8,11 +8,11 @@ export interface PathInterface {
   path: string;
 }
 
-export interface FileTargetInterface extends PathInterface {
+export interface FileObjectInterface extends PathInterface {
   type: 'file';
 }
 
-export interface DirTargetInterface<Tree extends TreeInterface>
+export interface DirObjectInterface<Tree extends TreeInterface>
   extends PathInterface {
   type: 'dir';
   children: ObjectTreeType<Tree>;
@@ -20,8 +20,20 @@ export interface DirTargetInterface<Tree extends TreeInterface>
 
 export type ObjectTreeType<Tree extends TreeInterface> = {
   [key in keyof Tree]: Tree[key] extends FileType
-    ? FileTargetInterface
+    ? FileObjectInterface
     : Tree[key] extends TreeInterface
-      ? DirTargetInterface<Tree[key]>
+      ? DirObjectInterface<Tree[key]>
       : never;
+};
+
+export interface FileProxyNode {
+  readonly value: string;
+}
+
+export type ProxyTree<Tree extends TreeInterface> = {
+  [key in keyof Tree]: Tree[key] extends FileType
+    ? FileProxyNode
+    : Tree[key] extends TreeInterface
+      ? ProxyTree<Tree[key]>
+      : Tree[key];
 };
