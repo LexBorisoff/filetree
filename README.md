@@ -175,18 +175,18 @@ An action is a function that performs some operation on a given file or director
 
 The `use` method accepts an object that has 2 properties:
 
-- `file` - a function that takes a `targetFile` object of type `FileTargetInterface` and returns an object with file actions.
-- `dir` - a function that takes a `targetDir` object of type `DirTargetInterface` and returns an object with directory actions.
+- `file` - a function that takes a `targetFile` object of type `FileObjectInterface` and returns an object with file actions.
+- `dir` - a function that takes a `targetDir` object of type `DirObjectInterface` and returns an object with directory actions.
 
 ```typescript
 // describes targetFile
-interface FileTargetInterface {
+interface FileObjectInterface {
   type: 'file';
   path: string;
 }
 
 // describes targetDir
-interface DirTargetInterface<Tree extends TreeInterface> {
+interface DirObjectInterface<Tree extends TreeInterface> {
   type: 'dir';
   children: ObjectTreeType<Tree>;
   path: string;
@@ -194,9 +194,9 @@ interface DirTargetInterface<Tree extends TreeInterface> {
 
 type ObjectTreeType<Tree extends TreeInterface> = {
   [key in keyof Tree]: Tree[key] extends string
-    ? FileTargetInterface
+    ? FileObjectInterface
     : Tree[key] extends TreeInterface
-      ? DirTargetInterface<Tree[key]>
+      ? DirObjectInterface<Tree[key]>
       : never;
 };
 ```
@@ -236,7 +236,7 @@ const actions = fileTree.use({
 
 ### Target file and directory objects
 
-The `file` method accepts an argument of type `FileTargetInterface` and the `dir` method accepts an argument of type `DirTargetInterface`. These arguments are objects that *represent* the selected file or directory from the tree when you call the function returned from the `use` method. Following the above example, when selecting a file and a directory like this:
+The `file` method accepts an argument of type `FileObjectInterface` and the `dir` method accepts an argument of type `DirObjectInterface`. These arguments are objects that *represent* the selected file or directory from the tree when you call the function returned from the `use` method. Following the above example, when selecting a file and a directory like this:
 
 ```typescript
 const file1 = actions((root) => root.dir1.dir2.file1);

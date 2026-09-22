@@ -7,7 +7,11 @@ import { NEW_DIR_NAME } from './dir-actions.js';
 import { getFilesInfo, type FileInfo } from './get-files-info.js';
 
 import type { FileTree } from '@app/main.js';
-import type { TreeInterface } from '@app-types/tree.types.js';
+import type {
+  ProxyFileNode,
+  ProxyTree,
+  TreeInterface,
+} from '@app-types/tree.types.js';
 import type { CoreActionsType } from '@core-actions/core-actions.types.js';
 
 type TestFileActionsCb = (
@@ -43,19 +47,13 @@ export function getTestFileActions(
        * Test file from the tree
        */
       const fileActions = actions((root) => {
-        let currentDir: TreeInterface = root;
+        let currentDir: ProxyTree<TreeInterface> = root;
 
         pathDirs.forEach((dirName) => {
-          const dir = currentDir[dirName];
-          if (
-            Object.keys(currentDir).includes(dirName) &&
-            typeof dir === 'object'
-          ) {
-            currentDir = dir;
-          }
+          currentDir = currentDir[dirName];
         });
 
-        return currentDir[fileName] as string;
+        return currentDir[fileName] as ProxyFileNode;
       });
 
       cb(fileActions, fileInfo);
@@ -64,16 +62,10 @@ export function getTestFileActions(
        * Tree directory
        */
       const dirActions = actions((root) => {
-        let currentDir: TreeInterface = root;
+        let currentDir: ProxyTree<TreeInterface> = root;
 
         pathDirs.forEach((dirName) => {
-          const dir = currentDir[dirName];
-          if (
-            Object.keys(currentDir).includes(dirName) &&
-            typeof dir === 'object'
-          ) {
-            currentDir = dir;
-          }
+          currentDir = currentDir[dirName];
         });
 
         return currentDir;

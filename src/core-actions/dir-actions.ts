@@ -10,7 +10,7 @@ import { FileTree } from '../main.js';
 import { fileActions } from './file-actions.js';
 
 import type {
-  DirTargetInterface,
+  DirObjectInterface,
   TreeInterface,
 } from '@app-types/tree.types.js';
 
@@ -57,7 +57,7 @@ export const dirActions = FileTree.dirActions((targetDir) => {
       recursive = false,
     ): ReturnType<typeof dirActions> | false {
       const dirPath = getPath(dirName);
-      const createdDir: DirTargetInterface<TreeInterface> = {
+      const createdDir: DirObjectInterface<TreeInterface> = {
         type: 'dir',
         path: dirPath,
         children: {},
