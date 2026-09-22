@@ -26,14 +26,14 @@ export type ObjectTreeType<Tree extends TreeInterface> = {
       : never;
 };
 
-export interface FileProxyNode {
+export interface ProxyFileNode {
   readonly value: string;
 }
 
 export type ProxyTree<Tree extends TreeInterface> = {
   [key in keyof Tree]: Tree[key] extends FileType
-    ? FileProxyNode
+    ? ProxyFileNode
     : Tree[key] extends TreeInterface
       ? ProxyTree<Tree[key]>
-      : Tree[key];
+      : never;
 };

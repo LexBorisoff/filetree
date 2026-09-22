@@ -1,11 +1,3 @@
-import {
-  type DirObjectInterface,
-  type FileObjectInterface,
-  type FileProxyNode,
-  type ProxyTree,
-  type TreeInterface,
-} from '@app-types/tree.types.js';
-
 import { buildObjectTree } from './object-tree/build-object-tree.js';
 
 import type {
@@ -13,6 +5,13 @@ import type {
   FileActionsFn,
   ActionsRecord,
 } from '@app-types/action.types.js';
+import type {
+  DirObjectInterface,
+  FileObjectInterface,
+  ProxyFileNode,
+  ProxyTree,
+  TreeInterface,
+} from '@app-types/tree.types.js';
 
 interface ActionsInterface<
   FileActions extends ActionsRecord,
@@ -22,15 +21,15 @@ interface ActionsInterface<
   dir?: DirActionsFn<DirActions>;
 }
 
-type TreeTarget = FileProxyNode | ProxyTree<TreeInterface>;
+type ProxyTreeTarget = ProxyFileNode | ProxyTree<TreeInterface>;
 type TargetObject = FileObjectInterface | DirObjectInterface<TreeInterface>;
 
-type MapActions<
-  T extends readonly TreeTarget[],
+type ActionsTuple<
+  T extends readonly ProxyTreeTarget[],
   FileActions extends ActionsRecord,
   DirActions extends ActionsRecord,
 > = {
-  [K in keyof T]: T[K] extends FileProxyNode
+  [K in keyof T]: T[K] extends ProxyFileNode
     ? FileActions
     : T[K] extends ProxyTree<TreeInterface>
       ? DirActions
@@ -41,19 +40,19 @@ export type ActionsFn<
   Tree extends TreeInterface,
   FileActions extends ActionsRecord,
   DirActions extends ActionsRecord,
-> = <const TreeTargets extends TreeTarget | readonly TreeTarget[]>(
+> = <const TreeTargets extends ProxyTreeTarget | readonly ProxyTreeTarget[]>(
   cb: (tree: ProxyTree<Tree>) => TreeTargets,
-) => TreeTargets extends FileProxyNode
+) => TreeTargets extends ProxyFileNode
   ? FileActions
   : TreeTargets extends ProxyTree<TreeInterface>
     ? DirActions
-    : TreeTargets extends readonly TreeTarget[]
-      ? MapActions<TreeTargets, FileActions, DirActions>
+    : TreeTargets extends readonly ProxyTreeTarget[]
+      ? ActionsTuple<TreeTargets, FileActions, DirActions>
       : never;
 
 function isTreeTargetArray(
-  target: TreeTarget | readonly TreeTarget[],
-): target is readonly TreeTarget[] {
+  target: ProxyTreeTarget | readonly ProxyTreeTarget[],
+): target is readonly ProxyTreeTarget[] {
   return Array.isArray(target);
 }
 
@@ -66,7 +65,7 @@ function buildProxyTree<R extends TreeInterface>(
   function traverse<T extends TreeInterface>(
     targetTree: T,
     targetObjectTree: DirObjectInterface<T>,
-  ): ProxyTree<T> {
+  ): T {
     return new Proxy(targetTree, {
       get(obj, prop: string, receiver) {
         const value = Reflect.get(obj, prop, receiver);
@@ -87,7 +86,7 @@ function buildProxyTree<R extends TreeInterface>(
         }
 
         if (typeof value === 'string' && child?.type === 'file') {
-          const fileNode: FileProxyNode = { value };
+          const fileNode: ProxyFileNode = { value };
           Object.defineProperty(fileNode, TARGET_SYM, {
             value: child,
             writable: true,
@@ -98,10 +97,14 @@ function buildProxyTree<R extends TreeInterface>(
 
         return value;
       },
-    }) as ProxyTree<T>;
+    });
   }
 
-  return traverse(rootTree, rootObjectTree);
+  const proxy = {} as ProxyTree<R>;
+  const res = traverse(rootTree, rootObjectTree);
+  Object.assign(proxy, res);
+
+  return proxy;
 }
 
 export class FileTree<Tree extends TreeInterface> {
@@ -133,7 +136,7 @@ export class FileTree<Tree extends TreeInterface> {
     type Actions = ActionsFn<Tree, FileActions, DirActions>;
     type ActionsCb = (
       tree: ProxyTree<Tree>,
-    ) => TreeTarget | readonly TreeTarget[];
+    ) => ProxyTreeTarget | readonly ProxyTreeTarget[];
     type ActionsReturn = FileActions | DirActions | null;
 
     const rootTree = this.#tree;
@@ -145,14 +148,11 @@ export class FileTree<Tree extends TreeInterface> {
       let targetObjects: TargetObject | TargetObject[] = [];
 
       if (isTreeTargetArray(targets)) {
-        targets.forEach((target) => {
-          targetObjects = [];
-          targetObjects.push(
-            target === proxyTree
-              ? rootObjectTree
-              : Object.getOwnPropertyDescriptor(target, TARGET_SYM)?.value,
-          );
-        });
+        targetObjects = targets.map((target) =>
+          target === proxyTree
+            ? rootObjectTree
+            : Object.getOwnPropertyDescriptor(target, TARGET_SYM)?.value,
+        );
       } else {
         targetObjects =
           targets === proxyTree
