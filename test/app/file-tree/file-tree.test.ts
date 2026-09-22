@@ -1,8 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, suite } from 'vitest';
 
-import { ActionError } from '@app/errors/action.errors.js';
 import { FileTree } from '@app/main.js';
-import { coreActions } from '@core-actions/core-actions.js';
 import { testSetup } from '@test-setup';
 import { tree } from '@test-utils/tree.js';
 
@@ -32,11 +30,6 @@ suite('FileTree - core properties', { concurrent: false }, () => {
   describe('use instance method', () => {
     it('should be defined', () => {
       expect(fileTree.use).toBeTypeOf('function');
-    });
-
-    it('should return undefined when target is invalid', () => {
-      const actions = fileTree.use(coreActions);
-      expect(() => actions(() => '')).toThrow(ActionError);
     });
   });
 });

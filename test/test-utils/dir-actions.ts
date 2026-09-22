@@ -5,7 +5,7 @@ import { coreActions } from '@core-actions/core-actions.js';
 import { getDirsInfo, type DirInfo } from './get-dirs-info.js';
 
 import type { FileTree } from '@app/main.js';
-import type { TreeInterface } from '@app-types/tree.types.js';
+import type { ProxyTree, TreeInterface } from '@app-types/tree.types.js';
 import type { CoreActionsType } from '@core-actions/core-actions.types.js';
 
 type TestDirActionsCb = (actions: CoreActionsType['dir'], dir: DirInfo) => void;
@@ -33,15 +33,10 @@ export function getTestDirActions(
        * Test directory from the tree
        */
       const dirActions = actions((root) => {
-        let currentDir: TreeInterface = root;
+        let currentDir: ProxyTree<TreeInterface> = root;
 
         pathDirs.forEach((dirName) => {
-          if (
-            Object.keys(currentDir).includes(dirName) &&
-            typeof currentDir[dirName] === 'object'
-          ) {
-            currentDir = currentDir[dirName];
-          }
+          currentDir = currentDir[dirName];
         });
 
         return currentDir;
