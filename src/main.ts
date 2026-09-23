@@ -22,7 +22,10 @@ interface ActionsInterface<
 }
 
 type ProxyTreeTarget = ProxyFileNode | ProxyTree<TreeInterface>;
-type TargetObject = FileObjectInterface | DirObjectInterface<TreeInterface>;
+type TargetObject =
+  | FileObjectInterface
+  | DirObjectInterface<TreeInterface>
+  | undefined;
 
 type ActionsTuple<
   T extends readonly ProxyTreeTarget[],
@@ -65,8 +68,8 @@ function buildProxyTree<R extends TreeInterface>(
   function traverse<T extends TreeInterface>(
     targetTree: T,
     targetObjectTree: DirObjectInterface<T>,
-  ): T {
-    return new Proxy(targetTree, {
+  ): ProxyTree<T> {
+    const proxy = new Proxy(targetTree, {
       get(obj, prop: string, receiver) {
         const value = Reflect.get(obj, prop, receiver);
         if (typeof prop === 'symbol') return value;
@@ -98,13 +101,11 @@ function buildProxyTree<R extends TreeInterface>(
         return value;
       },
     });
+
+    return proxy as unknown as ProxyTree<T>;
   }
 
-  const proxy = {} as ProxyTree<R>;
-  const res = traverse(rootTree, rootObjectTree);
-  Object.assign(proxy, res);
-
-  return proxy;
+  return traverse(rootTree, rootObjectTree);
 }
 
 export class FileTree<Tree extends TreeInterface> {
@@ -142,7 +143,9 @@ export class FileTree<Tree extends TreeInterface> {
     const rootTree = this.#tree;
     const rootObjectTree = buildObjectTree(this.#rootPath, this.#tree);
 
-    function getTargetObjects(cb: ActionsCb): TargetObject | TargetObject[] {
+    function getTargetObjects(
+      cb: ActionsCb,
+    ): TargetObject | TargetObject[] | undefined {
       const proxyTree = buildProxyTree(rootTree, rootObjectTree);
       const targets = cb(proxyTree);
       let targetObjects: TargetObject | TargetObject[] = [];
@@ -168,6 +171,8 @@ export class FileTree<Tree extends TreeInterface> {
 
       if (Array.isArray(targetObjects)) {
         return targetObjects.map((targetObject) => {
+          if (targetObject == null) return null;
+
           const { path, type } = targetObject;
 
           if (type === 'file') {
@@ -182,6 +187,8 @@ export class FileTree<Tree extends TreeInterface> {
           return null;
         });
       }
+
+      if (targetObjects == null) return null;
 
       const { path, type } = targetObjects;
 
