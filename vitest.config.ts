@@ -6,9 +6,10 @@ export default defineConfig({
   test: {
     coverage: {
       exclude: [
-        'src/types/**',
-        '*config.js',
         ...coverageConfigDefaults.exclude,
+        'src/types/**',
+        '**/index.ts',
+        '*config.js',
       ],
     },
   },

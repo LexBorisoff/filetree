@@ -1,9 +1,10 @@
 import lexjs from '@lexjs/eslint';
 import { useIgnoreFile } from '@lexjs/eslint/utils';
+import { defineConfig } from 'eslint/config';
 import globals from 'globals';
 import * as tseslint from 'typescript-eslint';
 
-export default tseslint.config(
+export default defineConfig(
   useIgnoreFile('.gitignore', import.meta),
   lexjs.configs.recommended,
   lexjs.configs.typescript,
@@ -36,13 +37,21 @@ export default tseslint.config(
     },
   },
   {
-    files: ['test*/**/*'],
+    files: ['**/*.test.{ts,mts,cts}'],
     settings: {
       'import/resolver': {
         typescript: {
           project: './tsconfig.test.json',
         },
       },
+    },
+    rules: {
+      'prefer-const': [
+        'error',
+        {
+          destructuring: 'all',
+        },
+      ],
     },
   },
 );

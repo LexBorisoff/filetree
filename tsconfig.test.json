@@ -9,5 +9,5 @@
       "@test-setup": ["./test/test-setup.ts"]
     }
   },
-  "include": ["test", "vitest.config.ts"]
+  "include": ["vitest.config.ts"]
 }
