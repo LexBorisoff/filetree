@@ -409,4 +409,110 @@ suite('core dir actions suite', { concurrent: false }, () => {
       });
     });
   });
+
+  describe('fileCreate core dir action', () => {
+    const testName = 'fileCreate';
+    beforeEachTest(testName);
+
+    const getTaskPath = createGetPathFn(testName);
+
+    function checkInFileSystem(filePaths: readonly string[]) {
+      return function check(exists: boolean): void {
+        filePaths.forEach((p) => {
+          expect(fs.existsSync(p)).toBe(exists);
+          if (exists) {
+            expect(fs.statSync(p).isFile()).toBe(true);
+          }
+        });
+      };
+    }
+
+    const fileActions = {
+      getPath: expect.any(Function),
+      read: expect.any(Function),
+      write: expect.any(Function),
+      clear: expect.any(Function),
+    };
+
+    it('creates file object of correct shape', () => {
+      const fileName = 'file';
+      const newDirName1 = 'new-dir-1';
+      const newDirName2 = 'new-dir-2';
+
+      const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
+
+      const newDirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
+        const newDir1 = dir.dirCreate(newDirName1) as DirActions;
+        const newDir2 = newDir1.dirCreate(newDirName2) as DirActions;
+        return [...acc, newDir1, newDir2];
+      }, []);
+
+      const newFiles = [...treeDirs, ...newDirs].map((dir) =>
+        dir.fileCreate(fileName),
+      );
+
+      newFiles.forEach((file) => {
+        expect(file).toEqual(fileActions);
+      });
+    });
+
+    it('creates file by tree dirs in file system', ({ task }) => {
+      const getPath = getTaskPath(task.id);
+      const fileName = 'file';
+      const dirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
+
+      const filePaths = [
+        getPath(fileName),
+        getPath(dir1Name, fileName),
+        getPath(dir1Name, dir2Name, fileName),
+      ];
+
+      const check = checkInFileSystem(filePaths);
+      check(false);
+
+      dirs.forEach((dir) => dir.fileCreate(fileName, ''));
+      check(true);
+    });
+
+    it('creates file by created dirs in file system', ({ task }) => {
+      const getPath = getTaskPath(task.id);
+      const fileName = 'file';
+      const newDirName1 = 'new-dir-1';
+      const newDirName2 = 'new-dir-2';
+
+      const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
+
+      const newDirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
+        const newDir1 = dir.dirCreate(newDirName1) as DirActions;
+        const newDir2 = newDir1.dirCreate(newDirName2) as DirActions;
+        return [...acc, newDir1, newDir2];
+      }, []);
+
+      const filePaths = [
+        getPath(newDirName1, fileName),
+        getPath(newDirName1, newDirName2, fileName),
+        getPath(dir1Name, newDirName1, fileName),
+        getPath(dir1Name, newDirName1, newDirName2, fileName),
+        getPath(dir1Name, dir2Name, newDirName1, fileName),
+        getPath(dir1Name, dir2Name, newDirName1, newDirName2, fileName),
+      ];
+
+      const check = checkInFileSystem(filePaths);
+      check(false);
+
+      newDirs.forEach((dir) => dir.fileCreate(fileName, ''));
+      check(true);
+    });
+
+    it('returns false if fails to create file', ({ task }) => {
+      const getPath = getTaskPath(task.id);
+      const fileName = 'new-dir/file';
+      const root = actions((r) => r);
+      const newFile = root.fileCreate(fileName);
+      const newFilePath = getPath(fileName);
+
+      expect(newFile).toBe(false);
+      expect(fs.existsSync(newFilePath)).toBe(false);
+    });
+  });
 });
