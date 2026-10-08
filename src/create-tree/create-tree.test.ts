@@ -23,7 +23,7 @@ import type { TreeInterface } from '@app-types/tree.types.js';
 
 const KEEP_TEST_FOLDER: boolean = process.env.KEEP_TEST_FOLDER === 'true';
 
-const TEST_NAME = 'file-core-actions';
+const TEST_NAME = 'create-tree';
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 const TEST_PATH = path.join(__dirname, `__test__${TEST_NAME}`);
 

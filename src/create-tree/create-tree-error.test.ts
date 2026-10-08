@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CreateTreeError } from './create-tree-error.js';
 
-const TEST_NAME = 'file-core-actions';
+const TEST_NAME = 'create-tree-error';
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 const TEST_PATH = path.join(__dirname, `__test__${TEST_NAME}`);
 
