@@ -12,11 +12,11 @@ import {
   afterEach,
 } from 'vitest';
 
-import { CreateTreeError } from '@errors/create-tree.error.js';
 import * as createDir from '@utils/create-dir.js';
 
 import { FileTree } from '../main.js';
 
+import { CreateTreeError } from './create-tree-error.js';
 import { createTree } from './create-tree.js';
 
 import type { TreeInterface } from '@app-types/tree.types.js';
