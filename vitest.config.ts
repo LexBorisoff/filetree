@@ -4,12 +4,14 @@ import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [tsconfigPaths()],
   test: {
+    include: ['src/**/*.test.ts'],
     coverage: {
+      include: ['src/**/*.ts'],
       exclude: [
         ...coverageConfigDefaults.exclude,
-        'src/types/**',
+        '**/types',
+        '**/*.types.ts',
         '**/index.ts',
-        '*config.js',
       ],
     },
   },

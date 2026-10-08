@@ -37,11 +37,11 @@ export default defineConfig(
     },
   },
   {
-    files: ['**/*.test.{ts,mts,cts}'],
+    files: ['src/**/*.test.ts'],
     settings: {
       'import/resolver': {
         typescript: {
-          project: './tsconfig.test.json',
+          project: './tsconfig.json',
         },
       },
     },

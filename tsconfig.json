@@ -1,7 +1,22 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.test.json" }
-  ]
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@app-types/*": ["./src/types/*"],
+      "@core-actions/*": ["./src/core-actions/*"],
+      "@errors/*": ["./src/errors/*"],
+      "@utils/*": ["./src/utils/*"]
+    }
+  },
+  "include": ["src", "vitest.config.ts"]
 }
