@@ -425,6 +425,15 @@ suite('core dir actions suite', { concurrent: false }, () => {
         expect(fs.existsSync(currentPath)).toBe(false);
       });
     });
+
+    it('skips if dir does not exist', ({ task }) => {
+      const root = actions((r) => r);
+      const dirName = 'no-dir';
+      const dirPath = getTaskPath(task.id)(dirName);
+
+      root.dirDelete(dirName);
+      expect(fs.existsSync(dirPath)).toBe(false);
+    });
   });
 
   describe('fileCreate core dir action', () => {
@@ -595,6 +604,15 @@ suite('core dir actions suite', { concurrent: false }, () => {
         dir.fileDelete(fileName);
         expect(fs.existsSync(currentPath)).toBe(false);
       });
+    });
+
+    it('skips if file does not exist', ({ task }) => {
+      const fileName = 'no-file';
+      const filePath = getTaskPath(task.id)(fileName);
+      const root = actions((r) => r);
+
+      root.fileDelete(fileName);
+      expect(fs.existsSync(filePath)).toBe(false);
     });
   });
 
@@ -787,6 +805,15 @@ suite('core dir actions suite', { concurrent: false }, () => {
       filePaths.forEach((p) => {
         expect(readFile(p)).toBe('');
       });
+    });
+
+    it('skips if file does not exist', ({ task }) => {
+      const fileName = 'no-file';
+      const filePath = getTaskPath(task.id)(fileName);
+      const root = actions((r) => r);
+
+      root.fileClear(fileName);
+      expect(fs.existsSync(filePath)).toBe(false);
     });
   });
 });

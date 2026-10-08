@@ -216,4 +216,16 @@ describe('createTree function', () => {
 
     expect(() => createTree(fileTree)).toThrow(error);
   });
+
+  it('skips non-string and non-object tree properties', ({ task }) => {
+    const rootPath = getTestPath(task.id);
+    const sym = Symbol('file');
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ft = new FileTree(rootPath, { dir: sym as any });
+    createTree(ft);
+
+    expect(fs.existsSync(getTestPath(task.id, 'dir'))).toBe(false);
+    expect(fs.readdirSync(rootPath).length).toBe(0);
+  });
 });
