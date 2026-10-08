@@ -41,6 +41,14 @@ function createGetPathFn(testName: string) {
   };
 }
 
+function readFile(filePath: string): string {
+  return fs.readFileSync(filePath, { encoding: 'utf-8' });
+}
+
+function fileData(data: number | string): string {
+  return `File data ${data}`;
+}
+
 const dir1Name = 'dir1';
 const dir2Name = 'dir2';
 const file1Name = 'file1';
@@ -92,7 +100,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
       if (fs.existsSync(CURRENT_TEST_PATH)) {
         deleteTaskDir();
       }
-      fs.mkdirSync(taskPath(), { recursive: true });
+      fs.mkdirSync(CURRENT_TEST_PATH, { recursive: true });
 
       // create tree in task directory
       fs.mkdirSync(taskPath(dir1Name, dir2Name), { recursive: true });
@@ -596,10 +604,6 @@ suite('core dir actions suite', { concurrent: false }, () => {
 
     const getTaskPath = createGetPathFn(testName);
 
-    function data(index: number): string {
-      return `File data ${index}`;
-    }
-
     it('reads file located in tree dirs', ({ task }) => {
       const getPath = getTaskPath(task.id);
       const fileName = 'file';
@@ -611,10 +615,10 @@ suite('core dir actions suite', { concurrent: false }, () => {
         getPath(dir1Name, dir2Name, fileName),
       ];
 
-      filePaths.forEach((p, i) => fs.writeFileSync(p, data(i)));
+      filePaths.forEach((p, i) => fs.writeFileSync(p, fileData(i)));
 
       treeDirs.forEach((dir, i) => {
-        expect(dir.fileRead(fileName)).toBe(data(i));
+        expect(dir.fileRead(fileName)).toBe(fileData(i));
       });
     });
 
@@ -641,10 +645,10 @@ suite('core dir actions suite', { concurrent: false }, () => {
         getPath(dir1Name, dir2Name, newDirName1, newDirName2, fileName),
       ];
 
-      filePaths.forEach((p, i) => fs.writeFileSync(p, data(i)));
+      filePaths.forEach((p, i) => fs.writeFileSync(p, fileData(i)));
 
       newDirs.forEach((dir, i) => {
-        expect(dir.fileRead(fileName)).toBe(data(i));
+        expect(dir.fileRead(fileName)).toBe(fileData(i));
       });
     });
   });
@@ -659,13 +663,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
 
     const getTaskPath = createGetPathFn(testName);
 
-    function data(index: number): string {
-      return `File data ${index}`;
-    }
-
-    it('writes to file in tree dirs using fs', ({ task }) => {
-      const spy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-
+    it('creates new file and writes to it in tree dirs', ({ task }) => {
       const getPath = getTaskPath(task.id);
       const fileName = 'file';
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
@@ -676,17 +674,19 @@ suite('core dir actions suite', { concurrent: false }, () => {
         getPath(dir1Name, dir2Name, fileName),
       ];
 
-      treeDirs.forEach((dir, i) => {
-        dir.fileWrite(fileName, data(i));
+      filePaths.forEach((p) => {
+        expect(fs.existsSync(p)).toBe(false);
+      });
 
-        expect(spy).toHaveBeenCalledTimes(i + 1);
-        expect(spy).toHaveBeenCalledWith(filePaths[i], data(i));
+      treeDirs.forEach((dir, i) => dir.fileWrite(fileName, fileData(i)));
+
+      filePaths.forEach((p, i) => {
+        expect(fs.existsSync(p)).toBe(true);
+        expect(readFile(p)).toBe(fileData(i));
       });
     });
 
-    it('creates new file in created dirs and writes to it', ({ task }) => {
-      const spy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-
+    it('creates new file and writes to it in created dirs', ({ task }) => {
       const getPath = getTaskPath(task.id);
       const fileName = 'file';
       const newDirName1 = 'new-dir-1';
@@ -709,11 +709,15 @@ suite('core dir actions suite', { concurrent: false }, () => {
         getPath(dir1Name, dir2Name, newDirName1, newDirName2, fileName),
       ];
 
-      newDirs.forEach((dir, i) => {
-        dir.fileWrite(fileName, data(i));
+      filePaths.forEach((p) => {
+        expect(fs.existsSync(p)).toBe(false);
+      });
 
-        expect(spy).toHaveBeenCalledTimes(i + 1);
-        expect(spy).toHaveBeenCalledWith(filePaths[i], data(i));
+      newDirs.forEach((dir, i) => dir.fileWrite(fileName, fileData(i)));
+
+      filePaths.forEach((p, i) => {
+        expect(fs.existsSync(p)).toBe(true);
+        expect(readFile(p)).toBe(fileData(i));
       });
     });
   });
@@ -723,10 +727,6 @@ suite('core dir actions suite', { concurrent: false }, () => {
     beforeEachTest(testName);
 
     const getTaskPath = createGetPathFn(testName);
-
-    function data(index: number): string {
-      return `File data ${index}`;
-    }
 
     it('clears file in tree dirs', ({ task }) => {
       const getPath = getTaskPath(task.id);
@@ -740,16 +740,16 @@ suite('core dir actions suite', { concurrent: false }, () => {
         getPath(dir1Name, dir2Name, fileName),
       ];
 
-      filePaths.forEach((p, i) => fs.writeFileSync(p, data(i)));
+      filePaths.forEach((p, i) => fs.writeFileSync(p, fileData(i)));
 
       filePaths.forEach((p, i) => {
-        expect(fs.readFileSync(p, { encoding: 'utf8' })).toBe(data(i));
+        expect(readFile(p)).toBe(fileData(i));
       });
 
       treeDirs.forEach((dir) => dir.fileClear(fileName));
 
       filePaths.forEach((p) => {
-        expect(fs.readFileSync(p, { encoding: 'utf8' })).toBe('');
+        expect(readFile(p)).toBe('');
       });
     });
 
@@ -776,16 +776,16 @@ suite('core dir actions suite', { concurrent: false }, () => {
         getPath(dir1Name, dir2Name, newDirName1, newDirName2, fileName),
       ];
 
-      filePaths.forEach((p, i) => fs.writeFileSync(p, data(i)));
+      filePaths.forEach((p, i) => fs.writeFileSync(p, fileData(i)));
 
       filePaths.forEach((p, i) => {
-        expect(fs.readFileSync(p, { encoding: 'utf8' })).toBe(data(i));
+        expect(readFile(p)).toBe(fileData(i));
       });
 
       newDirs.forEach((dir) => dir.fileClear(fileName));
 
       filePaths.forEach((p) => {
-        expect(fs.readFileSync(p, { encoding: 'utf8' })).toBe('');
+        expect(readFile(p)).toBe('');
       });
     });
   });

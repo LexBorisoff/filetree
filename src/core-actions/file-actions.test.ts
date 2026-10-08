@@ -24,19 +24,38 @@ function deleteTestDir(...dirs: readonly string[]): void {
   fs.rmSync(getTestPath(...dirs), { force: true, recursive: true });
 }
 
+function createGetPathFn(testName: string) {
+  return function getCurrentTaskPath(taskId: string) {
+    return function getPath(...args: readonly string[]): string {
+      return getTestPath(testName, taskId, ...args);
+    };
+  };
+}
+
+function readFile(filePath: string): string {
+  return fs.readFileSync(filePath, { encoding: 'utf-8' });
+}
+
+function fileData(data: number | string): string {
+  return `File data ${data}`;
+}
+
 const dir1Name = 'dir1';
 const dir2Name = 'dir2';
 const file1Name = 'file1';
-const file2Name = 'file2.txt';
+const file2Name = 'file2.ts';
 const file3Name = 'file3.md';
+const file1Data = 'File 1 data';
+const file2Data = 'const file = "File 2 data"';
+const file3Data = '# File 3 Data';
 
-suite('file actions suite', () => {
+suite('core file actions suite', { concurrent: false }, () => {
   const tree = {
-    [file1Name]: '',
+    [file1Name]: file1Data,
     [dir1Name]: {
-      [file2Name]: '',
+      [file2Name]: file2Data,
       [dir2Name]: {
-        [file3Name]: '',
+        [file3Name]: file3Data,
       },
     },
   } satisfies TreeInterface;
@@ -60,24 +79,32 @@ suite('file actions suite', () => {
   });
 
   function beforeEachTest(testName: string): void {
-    const CURRENT_TEST_PATH = getTestPath(testName);
-
-    beforeEach(() => {
-      if (fs.existsSync(CURRENT_TEST_PATH)) {
-        deleteTestDir(testName);
+    beforeEach(({ task }) => {
+      function taskPath(...args: readonly string[]): string {
+        return getTestPath(testName, task.id, ...args);
       }
-      fs.mkdirSync(CURRENT_TEST_PATH);
 
-      fs.mkdirSync(getTestPath(testName, dir1Name, dir2Name, 'dir3'), {
-        recursive: true,
-      });
+      const CURRENT_TEST_PATH = taskPath();
+      const deleteTaskDir = (): void => deleteTestDir(testName, task.id);
+
+      // create current task directory
+      if (fs.existsSync(CURRENT_TEST_PATH)) {
+        deleteTaskDir();
+      }
+      fs.mkdirSync(CURRENT_TEST_PATH, { recursive: true });
+
+      // create tree in task directory
+      fs.mkdirSync(taskPath(dir1Name, dir2Name), { recursive: true });
+      fs.writeFileSync(taskPath(file1Name), file1Data);
+      fs.writeFileSync(taskPath(dir1Name, file2Name), file2Data);
+      fs.writeFileSync(taskPath(dir1Name, dir2Name, file3Name), file3Data);
 
       fileTree = new FileTree(CURRENT_TEST_PATH, tree);
       actions = fileTree.use(coreActions);
 
       return function cleanup() {
         if (!KEEP_TEST_FOLDER) {
-          deleteTestDir(testName);
+          deleteTaskDir();
         }
       };
     });
@@ -87,61 +114,52 @@ suite('file actions suite', () => {
     const testName = 'getPath';
     beforeEachTest(testName);
 
-    function getPath(...args: readonly string[]): string {
-      return getTestPath(testName, ...args);
-    }
+    const getTaskPath = createGetPathFn(testName);
 
-    it('returns correct path for a file from tree', () => {
-      const [f1, f2, f3] = actions((r) => [
+    it('returns path for tree files', ({ task }) => {
+      const getPath = getTaskPath(task.id);
+      const treeFiles = actions((r) => [
         r[file1Name],
         r[dir1Name][file2Name],
         r[dir1Name][dir2Name][file3Name],
       ]);
 
-      expect(f1.getPath()).toBe(getPath(file1Name));
-      expect(f2.getPath()).toBe(getPath(dir1Name, file2Name));
-      expect(f3.getPath()).toBe(getPath(dir1Name, dir2Name, file3Name));
+      const filePaths = [
+        getPath(file1Name),
+        getPath(dir1Name, file2Name),
+        getPath(dir1Name, dir2Name, file3Name),
+      ];
+
+      treeFiles.forEach((file, i) => {
+        expect(file.getPath()).toBe(filePaths[i]);
+      });
     });
 
-    it('returns correct path for a file created with fileCreate on a tree directory', () => {
+    it('returns path for created files', ({ task }) => {
+      const getPath = getTaskPath(task.id);
       const newFileName = 'new-file';
-      const [root, d1, d2] = actions((r) => [
-        r,
-        r[dir1Name],
-        r[dir1Name][dir2Name],
-      ]);
-
-      const f1 = root.fileCreate(newFileName) as FileActions;
-      const f2 = d1.fileCreate(newFileName) as FileActions;
-      const f3 = d2.fileCreate(newFileName) as FileActions;
-
-      expect(f1.getPath()).toBe(getPath(newFileName));
-      expect(f2.getPath()).toBe(getPath(dir1Name, newFileName));
-      expect(f3.getPath()).toBe(getPath(dir1Name, dir2Name, newFileName));
-    });
-
-    it('returns correct path for a file created with dirCreate + fileCreate', () => {
       const newDirName = 'new-dir';
-      const newFileName = 'new-file';
-      const [root, d1, d2] = actions((r) => [
-        r,
-        r[dir1Name],
-        r[dir1Name][dir2Name],
-      ]);
+      const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
-      const newD1 = root.dirCreate(newDirName) as DirActions;
-      const newD2 = d1.dirCreate(newDirName) as DirActions;
-      const newD3 = d2.dirCreate(newDirName) as DirActions;
+      const newFiles = treeDirs.reduce<FileActions[]>((acc, dir) => {
+        const newDir = dir.dirCreate(newDirName) as DirActions;
+        const newFile1 = dir.fileCreate(newFileName) as FileActions;
+        const newFile2 = newDir.fileCreate(newFileName) as FileActions;
+        return [...acc, newFile1, newFile2];
+      }, []);
 
-      const f1 = newD1.fileCreate(newFileName) as FileActions;
-      const f2 = newD2.fileCreate(newFileName) as FileActions;
-      const f3 = newD3.fileCreate(newFileName) as FileActions;
-
-      expect(f1.getPath()).toBe(getPath(newDirName, newFileName));
-      expect(f2.getPath()).toBe(getPath(dir1Name, newDirName, newFileName));
-      expect(f3.getPath()).toBe(
+      const filePaths = [
+        getPath(newFileName),
+        getPath(newDirName, newFileName),
+        getPath(dir1Name, newFileName),
+        getPath(dir1Name, newDirName, newFileName),
+        getPath(dir1Name, dir2Name, newFileName),
         getPath(dir1Name, dir2Name, newDirName, newFileName),
-      );
+      ];
+
+      newFiles.forEach((file, i) => {
+        expect(file.getPath()).toBe(filePaths[i]);
+      });
     });
   });
 
@@ -149,67 +167,58 @@ suite('file actions suite', () => {
     const testName = 'read';
     beforeEachTest(testName);
 
-    function getPath(...args: readonly string[]): string {
-      return getTestPath(testName, ...args);
-    }
+    const getTaskPath = createGetPathFn(testName);
 
-    const data = (append: number): string => `File data ${append}`;
+    it('reads tree files', ({ task }) => {
+      const getPath = getTaskPath(task.id);
 
-    it('reads file from tree', () => {
-      fs.writeFileSync(getPath(file1Name), data(1));
-      fs.writeFileSync(getPath(dir1Name, file2Name), data(2));
-      fs.writeFileSync(getPath(dir1Name, dir2Name, file3Name), data(3));
+      const filePaths = [
+        getPath(file1Name),
+        getPath(dir1Name, file2Name),
+        getPath(dir1Name, dir2Name, file3Name),
+      ];
 
-      const [f1, f2, f3] = actions((r) => [
+      filePaths.forEach((p, i) => fs.writeFileSync(p, fileData(i)));
+
+      const treeFiles = actions((r) => [
         r[file1Name],
         r[dir1Name][file2Name],
         r[dir1Name][dir2Name][file3Name],
       ]);
 
-      expect(f1.read()).toBe(data(1));
-      expect(f2.read()).toBe(data(2));
-      expect(f3.read()).toBe(data(3));
+      treeFiles.forEach((file, i) => {
+        expect(file.read()).toBe(fileData(i));
+      });
     });
 
-    it('reads file created with fileCreate on a tree directory', () => {
-      const newFileName = 'new-file';
-
-      const [root, d1, d2] = actions((r) => [
-        r,
-        r[dir1Name],
-        r[dir1Name][dir2Name],
-      ]);
-
-      const f1 = root.fileCreate(newFileName, data(1)) as FileActions;
-      const f2 = d1.fileCreate(newFileName, data(2)) as FileActions;
-      const f3 = d2.fileCreate(newFileName, data(3)) as FileActions;
-
-      expect(f1.read()).toBe(data(1));
-      expect(f2.read()).toBe(data(2));
-      expect(f3.read()).toBe(data(3));
-    });
-
-    it('reads file created with dirCreate + fileCreate', () => {
+    it('reads created files', ({ task }) => {
+      const getPath = getTaskPath(task.id);
       const newFileName = 'new-file';
       const newDirName = 'new-dir';
 
-      const [root, d1, d2] = actions((r) => [
-        r,
-        r[dir1Name],
-        r[dir1Name][dir2Name],
-      ]);
+      const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
-      const newDir1 = root.dirCreate(newDirName) as DirActions;
-      const newDir2 = d1.dirCreate(newDirName) as DirActions;
-      const newDir3 = d2.dirCreate(newDirName) as DirActions;
+      const newFiles = treeDirs.reduce<FileActions[]>((acc, dir) => {
+        const newDir = dir.dirCreate(newDirName) as DirActions;
+        const newFile1 = dir.fileCreate(newFileName) as FileActions;
+        const newFile2 = newDir.fileCreate(newFileName) as FileActions;
+        return [...acc, newFile1, newFile2];
+      }, []);
 
-      const f1 = newDir1.fileCreate(newFileName, data(1)) as FileActions;
-      const f2 = newDir2.fileCreate(newFileName, data(2)) as FileActions;
-      const f3 = newDir3.fileCreate(newFileName, data(3)) as FileActions;
+      const filePaths = [
+        getPath(newFileName),
+        getPath(newDirName, newFileName),
+        getPath(dir1Name, newFileName),
+        getPath(dir1Name, newDirName, newFileName),
+        getPath(dir1Name, dir2Name, newFileName),
+        getPath(dir1Name, dir2Name, newDirName, newFileName),
+      ];
 
-      expect(f1.read()).toBe(data(1));
-      expect(f2.read()).toBe(data(2));
-      expect(f3.read()).toBe(data(3));
+      filePaths.forEach((p, i) => fs.writeFileSync(p, fileData(i)));
+
+      newFiles.forEach((file, i) => {
+        expect(file.read()).toBe(fileData(i));
+      });
     });
   });
 
@@ -217,93 +226,66 @@ suite('file actions suite', () => {
     const testName = 'write';
     beforeEachTest(testName);
 
-    function getPath(...args: readonly string[]): string {
-      return getTestPath(testName, ...args);
-    }
+    const getTaskPath = createGetPathFn(testName);
 
-    function readFile(filePath: string): string {
-      return fs.readFileSync(filePath, { encoding: 'utf-8' });
-    }
+    it('writes to tree files', ({ task }) => {
+      const getPath = getTaskPath(task.id);
 
-    const data = (append: number): string => `File data ${append}`;
-
-    it('writes to file from tree', () => {
-      const [f1, f2, f3] = actions((r) => [
+      const treeFiles = actions((r) => [
         r[file1Name],
         r[dir1Name][file2Name],
         r[dir1Name][dir2Name][file3Name],
       ]);
 
-      f1.write(data(1));
-      f2.write(data(2));
-      f3.write(data(3));
+      const filePaths = [
+        [getPath(file1Name), file1Data],
+        [getPath(dir1Name, file2Name), file2Data],
+        [getPath(dir1Name, dir2Name, file3Name), file3Data],
+      ];
 
-      const f1Data = readFile(getPath(file1Name));
-      const f2Data = readFile(getPath(dir1Name, file2Name));
-      const f3Data = readFile(getPath(dir1Name, dir2Name, file3Name));
+      filePaths.forEach(([p, d]) => {
+        expect(readFile(p)).toBe(d);
+      });
 
-      expect(f1Data).toBe(data(1));
-      expect(f2Data).toBe(data(2));
-      expect(f3Data).toBe(data(3));
+      treeFiles.forEach((file, i) => file.write(fileData(i)));
+
+      filePaths.forEach(([p], i) => {
+        expect(readFile(p)).toBe(fileData(i));
+      });
     });
 
-    it('writes to file created with fileCreate on a tree directory', () => {
-      const newFileName = 'new-file';
-
-      const [root, d1, d2] = actions((r) => [
-        r,
-        r[dir1Name],
-        r[dir1Name][dir2Name],
-      ]);
-
-      const f1 = root.fileCreate(newFileName) as FileActions;
-      const f2 = d1.fileCreate(newFileName) as FileActions;
-      const f3 = d2.fileCreate(newFileName) as FileActions;
-
-      f1.write(data(1));
-      f2.write(data(2));
-      f3.write(data(3));
-
-      const f1Data = readFile(getPath(newFileName));
-      const f2Data = readFile(getPath(dir1Name, newFileName));
-      const f3Data = readFile(getPath(dir1Name, dir2Name, newFileName));
-
-      expect(f1Data).toBe(data(1));
-      expect(f2Data).toBe(data(2));
-      expect(f3Data).toBe(data(3));
-    });
-
-    it('writes to file created with dirCreate + fileCreate', () => {
+    it('writes to created files', ({ task }) => {
+      const getPath = getTaskPath(task.id);
       const newFileName = 'new-file';
       const newDirName = 'new-dir';
 
-      const [root, d1, d2] = actions((r) => [
-        r,
-        r[dir1Name],
-        r[dir1Name][dir2Name],
-      ]);
+      const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
-      const newDir1 = root.dirCreate(newDirName) as DirActions;
-      const newDir2 = d1.dirCreate(newDirName) as DirActions;
-      const newDir3 = d2.dirCreate(newDirName) as DirActions;
+      const newFiles = treeDirs.reduce<FileActions[]>((acc, dir) => {
+        const newDir = dir.dirCreate(newDirName) as DirActions;
+        const newFile1 = dir.fileCreate(newFileName) as FileActions;
+        const newFile2 = newDir.fileCreate(newFileName) as FileActions;
+        return [...acc, newFile1, newFile2];
+      }, []);
 
-      const f1 = newDir1.fileCreate(newFileName) as FileActions;
-      const f2 = newDir2.fileCreate(newFileName) as FileActions;
-      const f3 = newDir3.fileCreate(newFileName) as FileActions;
-
-      f1.write(data(1));
-      f2.write(data(2));
-      f3.write(data(3));
-
-      const f1Data = readFile(getPath(newDirName, newFileName));
-      const f2Data = readFile(getPath(dir1Name, newDirName, newFileName));
-      const f3Data = readFile(
+      const filePaths = [
+        getPath(newFileName),
+        getPath(newDirName, newFileName),
+        getPath(dir1Name, newFileName),
+        getPath(dir1Name, newDirName, newFileName),
+        getPath(dir1Name, dir2Name, newFileName),
         getPath(dir1Name, dir2Name, newDirName, newFileName),
-      );
+      ];
 
-      expect(f1Data).toBe(data(1));
-      expect(f2Data).toBe(data(2));
-      expect(f3Data).toBe(data(3));
+      filePaths.forEach((p) => {
+        expect(readFile(p)).toBe('');
+      });
+
+      newFiles.forEach((file, i) => file.write(fileData(i)));
+
+      filePaths.forEach((p, i) => {
+        expect(readFile(p)).toBe(fileData(i));
+      });
     });
   });
 
@@ -311,106 +293,68 @@ suite('file actions suite', () => {
     const testName = 'clear';
     beforeEachTest(testName);
 
-    function getPath(...args: readonly string[]): string {
-      return getTestPath(testName, ...args);
-    }
+    const getTaskPath = createGetPathFn(testName);
 
-    function readFile(filePath: string): string {
-      return fs.readFileSync(filePath, { encoding: 'utf-8' });
-    }
+    it('clears tree files', ({ task }) => {
+      const getPath = getTaskPath(task.id);
 
-    const data = (append: number): string => `File data ${append}`;
-
-    it('clears file from tree', () => {
-      const f1Path = getPath(file1Name);
-      const f2Path = getPath(dir1Name, file2Name);
-      const f3Path = getPath(dir1Name, dir2Name, file3Name);
-
-      fs.writeFileSync(f1Path, data(1));
-      fs.writeFileSync(f2Path, data(2));
-      fs.writeFileSync(f3Path, data(3));
-
-      expect(readFile(f1Path)).toBe(data(1));
-      expect(readFile(f2Path)).toBe(data(2));
-      expect(readFile(f3Path)).toBe(data(3));
-
-      const [f1, f2, f3] = actions((r) => [
+      const treeFiles = actions((r) => [
         r[file1Name],
         r[dir1Name][file2Name],
         r[dir1Name][dir2Name][file3Name],
       ]);
 
-      f1.clear();
-      f2.clear();
-      f3.clear();
+      const filePaths = [
+        [getPath(file1Name), file1Data],
+        [getPath(dir1Name, file2Name), file2Data],
+        [getPath(dir1Name, dir2Name, file3Name), file3Data],
+      ];
 
-      expect(readFile(f1Path)).toBe('');
-      expect(readFile(f2Path)).toBe('');
-      expect(readFile(f3Path)).toBe('');
+      filePaths.forEach(([p, d]) => {
+        expect(readFile(p)).toBe(d);
+      });
+
+      treeFiles.forEach((file) => file.clear());
+
+      filePaths.forEach(([p]) => {
+        expect(readFile(p)).toBe('');
+      });
     });
 
-    it('clears file created with fileCreate on a tree directory', () => {
-      const newFileName = 'new-file';
-      const f1Path = getPath(newFileName);
-      const f2Path = getPath(dir1Name, newFileName);
-      const f3Path = getPath(dir1Name, dir2Name, newFileName);
-
-      const [root, d1, d2] = actions((r) => [
-        r,
-        r[dir1Name],
-        r[dir1Name][dir2Name],
-      ]);
-
-      const f1 = root.fileCreate(newFileName, data(1)) as FileActions;
-      const f2 = d1.fileCreate(newFileName, data(2)) as FileActions;
-      const f3 = d2.fileCreate(newFileName, data(3)) as FileActions;
-
-      expect(readFile(f1Path)).toBe(data(1));
-      expect(readFile(f2Path)).toBe(data(2));
-      expect(readFile(f3Path)).toBe(data(3));
-
-      f1.clear();
-      f2.clear();
-      f3.clear();
-
-      expect(readFile(f1Path)).toBe('');
-      expect(readFile(f2Path)).toBe('');
-      expect(readFile(f3Path)).toBe('');
-    });
-
-    it('clears file created with dirCreate + fileCreate', () => {
+    it('clears created files', ({ task }) => {
+      const getPath = getTaskPath(task.id);
       const newFileName = 'new-file';
       const newDirName = 'new-dir';
 
-      const f1Path = getPath(newDirName, newFileName);
-      const f2Path = getPath(dir1Name, newDirName, newFileName);
-      const f3Path = getPath(dir1Name, dir2Name, newDirName, newFileName);
+      const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
-      const [root, d1, d2] = actions((r) => [
-        r,
-        r[dir1Name],
-        r[dir1Name][dir2Name],
-      ]);
+      const newFiles = treeDirs.reduce<FileActions[]>((acc, dir) => {
+        const newDir = dir.dirCreate(newDirName) as DirActions;
+        const newFile1 = dir.fileCreate(newFileName) as FileActions;
+        const newFile2 = newDir.fileCreate(newFileName) as FileActions;
+        return [...acc, newFile1, newFile2];
+      }, []);
 
-      const newDir1 = root.dirCreate(newDirName) as DirActions;
-      const newDir2 = d1.dirCreate(newDirName) as DirActions;
-      const newDir3 = d2.dirCreate(newDirName) as DirActions;
+      const filePaths = [
+        getPath(newFileName),
+        getPath(newDirName, newFileName),
+        getPath(dir1Name, newFileName),
+        getPath(dir1Name, newDirName, newFileName),
+        getPath(dir1Name, dir2Name, newFileName),
+        getPath(dir1Name, dir2Name, newDirName, newFileName),
+      ];
 
-      const f1 = newDir1.fileCreate(newFileName, data(1)) as FileActions;
-      const f2 = newDir2.fileCreate(newFileName, data(2)) as FileActions;
-      const f3 = newDir3.fileCreate(newFileName, data(3)) as FileActions;
+      filePaths.forEach((p, i) => fs.writeFileSync(p, fileData(i)));
 
-      expect(readFile(f1Path)).toBe(data(1));
-      expect(readFile(f2Path)).toBe(data(2));
-      expect(readFile(f3Path)).toBe(data(3));
+      filePaths.forEach((p, i) => {
+        expect(readFile(p)).toBe(fileData(i));
+      });
 
-      f1.clear();
-      f2.clear();
-      f3.clear();
+      newFiles.forEach((file) => file.clear());
 
-      expect(readFile(f1Path)).toBe('');
-      expect(readFile(f2Path)).toBe('');
-      expect(readFile(f3Path)).toBe('');
+      filePaths.forEach((p) => {
+        expect(readFile(p)).toBe('');
+      });
     });
   });
 });
