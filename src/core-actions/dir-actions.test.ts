@@ -162,8 +162,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
       ];
 
       const newDirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
-        const newDir1 = dir.dirCreate(newDirName1) as DirActions;
-        const newDir2 = newDir1.dirCreate(newDirName2) as DirActions;
+        const newDir1 = dir.createDir(newDirName1) as DirActions;
+        const newDir2 = newDir1.createDir(newDirName2) as DirActions;
         return [...acc, newDir1, newDir2];
       }, []);
 
@@ -224,8 +224,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
       const newDirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
-        const newDir1 = dir.dirCreate(newDirName1) as DirActions;
-        const newDir2 = newDir1.dirCreate(newDirName2) as DirActions;
+        const newDir1 = dir.createDir(newDirName1) as DirActions;
+        const newDir2 = newDir1.createDir(newDirName2) as DirActions;
         return [...acc, newDir1, newDir2];
       }, []);
 
@@ -258,8 +258,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
     });
   });
 
-  describe('dirCreate core dir action', () => {
-    const testName = 'dirCreate';
+  describe('createDir core dir action', () => {
+    const testName = 'createDir';
     beforeEachTest(testName);
 
     const getTaskPath = createGetPathFn(testName);
@@ -267,13 +267,13 @@ suite('core dir actions suite', { concurrent: false }, () => {
     const dirActions = {
       getPath: expect.any(Function),
       exists: expect.any(Function),
-      dirCreate: expect.any(Function),
-      dirDelete: expect.any(Function),
-      fileCreate: expect.any(Function),
-      fileDelete: expect.any(Function),
-      fileRead: expect.any(Function),
-      fileWrite: expect.any(Function),
-      fileClear: expect.any(Function),
+      createDir: expect.any(Function),
+      deleteDir: expect.any(Function),
+      createFile: expect.any(Function),
+      deleteFile: expect.any(Function),
+      readFile: expect.any(Function),
+      writeFile: expect.any(Function),
+      clearFile: expect.any(Function),
     };
 
     it('creates dir object of correct shape', () => {
@@ -283,8 +283,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
       const dirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
-        const createdDir = dir.dirCreate(newDirName1) as DirActions;
-        const newDir = createdDir.dirCreate(newDirName2) as DirActions;
+        const createdDir = dir.createDir(newDirName1) as DirActions;
+        const newDir = createdDir.createDir(newDirName2) as DirActions;
         return [...acc, createdDir, newDir];
       }, []);
 
@@ -321,8 +321,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
       check(false);
 
       treeDirs.forEach((dir) => {
-        const newDir = dir.dirCreate(newDirName1) as DirActions;
-        newDir.dirCreate(newDirName2) as DirActions;
+        const newDir = dir.createDir(newDirName1) as DirActions;
+        newDir.createDir(newDirName2) as DirActions;
       });
 
       check(true);
@@ -334,7 +334,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const root = actions((r) => r);
 
       fs.mkdirSync(getPath(dirName));
-      const created = root.dirCreate(dirName);
+      const created = root.createDir(dirName);
 
       expect(created).toEqual(dirActions);
     });
@@ -343,7 +343,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const getPath = getTaskPath(task.id);
       const dirName = 'new-dir/new-dir';
       const root = actions((r) => r);
-      const newDir = root.dirCreate(dirName);
+      const newDir = root.createDir(dirName);
       const newDirPath = getPath(dirName);
 
       expect(newDir).toBe(false);
@@ -354,7 +354,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const getPath = getTaskPath(task.id);
       const dirName = 'new-dir/new-dir';
       const root = actions((r) => r);
-      const newDir = root.dirCreate(dirName, true);
+      const newDir = root.createDir(dirName, true);
       const newDirPath = getPath(dirName);
 
       expect(newDir).toEqual(dirActions);
@@ -362,8 +362,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
     });
   });
 
-  describe('dirDelete core dir action', () => {
-    const testName = 'dirDelete';
+  describe('deleteDir core dir action', () => {
+    const testName = 'deleteDir';
     beforeEachTest(testName);
 
     const getTaskPath = createGetPathFn(testName);
@@ -389,7 +389,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
       dirPaths.forEach((p) => fs.mkdirSync(p));
       check(true);
 
-      treeDirs.forEach((dir) => dir.dirDelete(dirName));
+      treeDirs.forEach((dir) => dir.deleteDir(dirName));
       check(false);
     });
 
@@ -411,8 +411,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
       ];
 
       const newDirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
-        const newDir1 = dir.dirCreate(newDirName1) as DirActions;
-        const newDir2 = newDir1.dirCreate(newDirName2) as DirActions;
+        const newDir1 = dir.createDir(newDirName1) as DirActions;
+        const newDir2 = newDir1.createDir(newDirName2) as DirActions;
         return [...acc, newDir1, newDir2];
       }, []);
 
@@ -421,7 +421,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
         fs.mkdirSync(currentPath);
         expect(fs.existsSync(currentPath)).toBe(true);
 
-        dir.dirDelete(dirName);
+        dir.deleteDir(dirName);
         expect(fs.existsSync(currentPath)).toBe(false);
       });
     });
@@ -431,13 +431,13 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const dirName = 'no-dir';
       const dirPath = getTaskPath(task.id)(dirName);
 
-      root.dirDelete(dirName);
+      root.deleteDir(dirName);
       expect(fs.existsSync(dirPath)).toBe(false);
     });
   });
 
-  describe('fileCreate core dir action', () => {
-    const testName = 'fileCreate';
+  describe('createFile core dir action', () => {
+    const testName = 'createFile';
     beforeEachTest(testName);
 
     const getTaskPath = createGetPathFn(testName);
@@ -468,13 +468,13 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
       const newDirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
-        const newDir1 = dir.dirCreate(newDirName1) as DirActions;
-        const newDir2 = newDir1.dirCreate(newDirName2) as DirActions;
+        const newDir1 = dir.createDir(newDirName1) as DirActions;
+        const newDir2 = newDir1.createDir(newDirName2) as DirActions;
         return [...acc, newDir1, newDir2];
       }, []);
 
       const newFiles = [...treeDirs, ...newDirs].map((dir) =>
-        dir.fileCreate(fileName),
+        dir.createFile(fileName),
       );
 
       newFiles.forEach((file) => {
@@ -496,7 +496,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const check = checkInFileSystem(filePaths);
       check(false);
 
-      dirs.forEach((dir) => dir.fileCreate(fileName, ''));
+      dirs.forEach((dir) => dir.createFile(fileName, ''));
       check(true);
     });
 
@@ -509,8 +509,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
       const newDirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
-        const newDir1 = dir.dirCreate(newDirName1) as DirActions;
-        const newDir2 = newDir1.dirCreate(newDirName2) as DirActions;
+        const newDir1 = dir.createDir(newDirName1) as DirActions;
+        const newDir2 = newDir1.createDir(newDirName2) as DirActions;
         return [...acc, newDir1, newDir2];
       }, []);
 
@@ -526,7 +526,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const check = checkInFileSystem(filePaths);
       check(false);
 
-      newDirs.forEach((dir) => dir.fileCreate(fileName, ''));
+      newDirs.forEach((dir) => dir.createFile(fileName, ''));
       check(true);
     });
 
@@ -534,7 +534,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const getPath = getTaskPath(task.id);
       const fileName = 'new-dir/file';
       const root = actions((r) => r);
-      const newFile = root.fileCreate(fileName);
+      const newFile = root.createFile(fileName);
       const newFilePath = getPath(fileName);
 
       expect(newFile).toBe(false);
@@ -542,8 +542,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
     });
   });
 
-  describe('fileDelete core dir action', () => {
-    const testName = 'fileDelete';
+  describe('deleteFile core dir action', () => {
+    const testName = 'deleteFile';
     beforeEachTest(testName);
 
     const getTaskPath = createGetPathFn(testName);
@@ -569,7 +569,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
       filePaths.forEach((p) => fs.writeFileSync(p, ''));
       check(true);
 
-      treeDirs.forEach((dir) => dir.fileDelete(fileName));
+      treeDirs.forEach((dir) => dir.deleteFile(fileName));
       check(false);
     });
 
@@ -591,8 +591,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
       ];
 
       const newDirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
-        const newDir1 = dir.dirCreate(newDirName1) as DirActions;
-        const newDir2 = newDir1.dirCreate(newDirName2) as DirActions;
+        const newDir1 = dir.createDir(newDirName1) as DirActions;
+        const newDir2 = newDir1.createDir(newDirName2) as DirActions;
         return [...acc, newDir1, newDir2];
       }, []);
 
@@ -601,7 +601,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
         fs.writeFileSync(currentPath, '');
         expect(fs.existsSync(currentPath)).toBe(true);
 
-        dir.fileDelete(fileName);
+        dir.deleteFile(fileName);
         expect(fs.existsSync(currentPath)).toBe(false);
       });
     });
@@ -611,13 +611,13 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const filePath = getTaskPath(task.id)(fileName);
       const root = actions((r) => r);
 
-      root.fileDelete(fileName);
+      root.deleteFile(fileName);
       expect(fs.existsSync(filePath)).toBe(false);
     });
   });
 
-  describe('fileRead core dir actions', () => {
-    const testName = 'fileRead';
+  describe('readFile core dir actions', () => {
+    const testName = 'readFile';
     beforeEachTest(testName);
 
     const getTaskPath = createGetPathFn(testName);
@@ -636,7 +636,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
       filePaths.forEach((p, i) => fs.writeFileSync(p, fileData(i)));
 
       treeDirs.forEach((dir, i) => {
-        expect(dir.fileRead(fileName)).toBe(fileData(i));
+        expect(dir.readFile(fileName)).toBe(fileData(i));
       });
     });
 
@@ -649,8 +649,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
       const newDirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
-        const newDir1 = dir.dirCreate(newDirName1) as DirActions;
-        const newDir2 = newDir1.dirCreate(newDirName2) as DirActions;
+        const newDir1 = dir.createDir(newDirName1) as DirActions;
+        const newDir2 = newDir1.createDir(newDirName2) as DirActions;
         return [...acc, newDir1, newDir2];
       }, []);
 
@@ -666,13 +666,13 @@ suite('core dir actions suite', { concurrent: false }, () => {
       filePaths.forEach((p, i) => fs.writeFileSync(p, fileData(i)));
 
       newDirs.forEach((dir, i) => {
-        expect(dir.fileRead(fileName)).toBe(fileData(i));
+        expect(dir.readFile(fileName)).toBe(fileData(i));
       });
     });
   });
 
-  describe('fileWrite core dir action', () => {
-    const testName = 'fileWrite';
+  describe('writeFile core dir action', () => {
+    const testName = 'writeFile';
     beforeEachTest(testName);
 
     afterEach(() => {
@@ -696,7 +696,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
         expect(fs.existsSync(p)).toBe(false);
       });
 
-      treeDirs.forEach((dir, i) => dir.fileWrite(fileName, fileData(i)));
+      treeDirs.forEach((dir, i) => dir.writeFile(fileName, fileData(i)));
 
       filePaths.forEach((p, i) => {
         expect(fs.existsSync(p)).toBe(true);
@@ -713,8 +713,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
       const newDirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
-        const newDir1 = dir.dirCreate(newDirName1) as DirActions;
-        const newDir2 = newDir1.dirCreate(newDirName2) as DirActions;
+        const newDir1 = dir.createDir(newDirName1) as DirActions;
+        const newDir2 = newDir1.createDir(newDirName2) as DirActions;
         return [...acc, newDir1, newDir2];
       }, []);
 
@@ -731,7 +731,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
         expect(fs.existsSync(p)).toBe(false);
       });
 
-      newDirs.forEach((dir, i) => dir.fileWrite(fileName, fileData(i)));
+      newDirs.forEach((dir, i) => dir.writeFile(fileName, fileData(i)));
 
       filePaths.forEach((p, i) => {
         expect(fs.existsSync(p)).toBe(true);
@@ -740,8 +740,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
     });
   });
 
-  describe('fileClear core dir action', () => {
-    const testName = 'fileClear';
+  describe('clearFile core dir action', () => {
+    const testName = 'clearFile';
     beforeEachTest(testName);
 
     const getTaskPath = createGetPathFn(testName);
@@ -764,7 +764,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
         expect(readFile(p)).toBe(fileData(i));
       });
 
-      treeDirs.forEach((dir) => dir.fileClear(fileName));
+      treeDirs.forEach((dir) => dir.clearFile(fileName));
 
       filePaths.forEach((p) => {
         expect(readFile(p)).toBe('');
@@ -780,8 +780,8 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
       const newDirs = treeDirs.reduce<DirActions[]>((acc, dir) => {
-        const newDir1 = dir.dirCreate(newDirName1) as DirActions;
-        const newDir2 = newDir1.dirCreate(newDirName2) as DirActions;
+        const newDir1 = dir.createDir(newDirName1) as DirActions;
+        const newDir2 = newDir1.createDir(newDirName2) as DirActions;
         return [...acc, newDir1, newDir2];
       }, []);
 
@@ -800,7 +800,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
         expect(readFile(p)).toBe(fileData(i));
       });
 
-      newDirs.forEach((dir) => dir.fileClear(fileName));
+      newDirs.forEach((dir) => dir.clearFile(fileName));
 
       filePaths.forEach((p) => {
         expect(readFile(p)).toBe('');
@@ -812,7 +812,7 @@ suite('core dir actions suite', { concurrent: false }, () => {
       const filePath = getTaskPath(task.id)(fileName);
       const root = actions((r) => r);
 
-      root.fileClear(fileName);
+      root.clearFile(fileName);
       expect(fs.existsSync(filePath)).toBe(false);
     });
   });
