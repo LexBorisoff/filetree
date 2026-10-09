@@ -13,7 +13,7 @@
       "import": "./dist/app/index.js",
       "default": "./dist/app/index.js"
     },
-    "./core": {
+    "./actions": {
       "types": "./dist/types/core-actions/index.d.ts",
       "import": "./dist/app/core-actions/index.js",
       "default": "./dist/app/core-actions/index.js"

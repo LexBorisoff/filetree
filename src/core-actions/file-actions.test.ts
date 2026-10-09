@@ -142,9 +142,9 @@ suite('core file actions suite', { concurrent: false }, () => {
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
       const newFiles = treeDirs.reduce<FileActions[]>((acc, dir) => {
-        const newDir = dir.dirCreate(newDirName) as DirActions;
-        const newFile1 = dir.fileCreate(newFileName) as FileActions;
-        const newFile2 = newDir.fileCreate(newFileName) as FileActions;
+        const newDir = dir.createDir(newDirName) as DirActions;
+        const newFile1 = dir.createFile(newFileName) as FileActions;
+        const newFile2 = newDir.createFile(newFileName) as FileActions;
         return [...acc, newFile1, newFile2];
       }, []);
 
@@ -199,9 +199,9 @@ suite('core file actions suite', { concurrent: false }, () => {
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
       const newFiles = treeDirs.reduce<FileActions[]>((acc, dir) => {
-        const newDir = dir.dirCreate(newDirName) as DirActions;
-        const newFile1 = dir.fileCreate(newFileName) as FileActions;
-        const newFile2 = newDir.fileCreate(newFileName) as FileActions;
+        const newDir = dir.createDir(newDirName) as DirActions;
+        const newFile1 = dir.createFile(newFileName) as FileActions;
+        const newFile2 = newDir.createFile(newFileName) as FileActions;
         return [...acc, newFile1, newFile2];
       }, []);
 
@@ -262,9 +262,9 @@ suite('core file actions suite', { concurrent: false }, () => {
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
       const newFiles = treeDirs.reduce<FileActions[]>((acc, dir) => {
-        const newDir = dir.dirCreate(newDirName) as DirActions;
-        const newFile1 = dir.fileCreate(newFileName) as FileActions;
-        const newFile2 = newDir.fileCreate(newFileName) as FileActions;
+        const newDir = dir.createDir(newDirName) as DirActions;
+        const newFile1 = dir.createFile(newFileName) as FileActions;
+        const newFile2 = newDir.createFile(newFileName) as FileActions;
         return [...acc, newFile1, newFile2];
       }, []);
 
@@ -329,9 +329,9 @@ suite('core file actions suite', { concurrent: false }, () => {
       const treeDirs = actions((r) => [r, r[dir1Name], r[dir1Name][dir2Name]]);
 
       const newFiles = treeDirs.reduce<FileActions[]>((acc, dir) => {
-        const newDir = dir.dirCreate(newDirName) as DirActions;
-        const newFile1 = dir.fileCreate(newFileName) as FileActions;
-        const newFile2 = newDir.fileCreate(newFileName) as FileActions;
+        const newDir = dir.createDir(newDirName) as DirActions;
+        const newFile1 = dir.createFile(newFileName) as FileActions;
+        const newFile2 = newDir.createFile(newFileName) as FileActions;
         return [...acc, newFile1, newFile2];
       }, []);
 

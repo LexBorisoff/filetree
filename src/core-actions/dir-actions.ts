@@ -52,7 +52,7 @@ export const dirActions = FileTree.dirActions((targetDir) => {
      * - `false` if the directory could not be created
      *
      */
-    dirCreate(
+    createDir(
       dirName: string,
       recursive = false,
     ): ReturnType<typeof dirActions> | false {
@@ -81,7 +81,7 @@ export const dirActions = FileTree.dirActions((targetDir) => {
      *
      * @param dirName directory name to delete
      */
-    dirDelete(dirName: string): void {
+    deleteDir(dirName: string): void {
       if (exists(dirName)) {
         fs.rmSync(getPath(dirName), {
           recursive: true,
@@ -101,12 +101,12 @@ export const dirActions = FileTree.dirActions((targetDir) => {
      * - File's actions if it already exists
      * - `false` if the file could not be created
      */
-    fileCreate(
+    createFile(
       fileName: string,
       data: unknown = '',
     ): ReturnType<typeof fileActions> | false {
       try {
-        this.fileWrite(fileName, data);
+        this.writeFile(fileName, data);
       } catch {
         return false;
       }
@@ -122,7 +122,7 @@ export const dirActions = FileTree.dirActions((targetDir) => {
      *
      * @param fileName file name to delete
      */
-    fileDelete(fileName: string): void {
+    deleteFile(fileName: string): void {
       if (exists(fileName)) {
         fs.rmSync(getPath(fileName));
       }
@@ -137,7 +137,7 @@ export const dirActions = FileTree.dirActions((targetDir) => {
      * - file data as a `string`
      * - `null` if the file cannot be read
      */
-    fileRead(fileName: string): string | null {
+    readFile(fileName: string): string | null {
       return readFile(getPath(fileName));
     },
 
@@ -147,7 +147,7 @@ export const dirActions = FileTree.dirActions((targetDir) => {
      * @param fileName file name to write data to
      * @param data data string to write
      */
-    fileWrite<Data>(fileName: string, data: Data): void {
+    writeFile<Data>(fileName: string, data: Data): void {
       fs.writeFileSync(getPath(fileName), getFileData(data));
     },
 
@@ -156,9 +156,9 @@ export const dirActions = FileTree.dirActions((targetDir) => {
      *
      * @param fileName file name to clear
      */
-    fileClear(fileName: string): void {
+    clearFile(fileName: string): void {
       if (exists(fileName)) {
-        this.fileWrite(fileName, '');
+        this.writeFile(fileName, '');
       }
     },
   };
