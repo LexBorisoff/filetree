@@ -1,6 +1,6 @@
 import type {
-  DirTargetInterface,
-  FileTargetInterface,
+  DirObjectInterface,
+  FileObjectInterface,
   TreeInterface,
 } from './tree.types.js';
 
@@ -9,9 +9,9 @@ export type ActionFn = (...args: any[]) => any;
 export type ActionsRecord = Record<string, ActionFn | undefined>;
 
 export type FileActionsFn<FileActions extends ActionsRecord> = (
-  targetFile: FileTargetInterface,
+  targetFile: FileObjectInterface,
 ) => FileActions;
 
 export type DirActionsFn<DirActions extends ActionsRecord> = (
-  targetDir: DirTargetInterface<TreeInterface>,
+  targetDir: DirObjectInterface<TreeInterface>,
 ) => DirActions;

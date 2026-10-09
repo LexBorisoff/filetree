@@ -1,25 +1,10 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
     "declaration": true,
     "outDir": "./dist/app",
-    "declarationDir": "./dist/types",
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "paths": {
-      "@app-types/*": ["./src/types/*"],
-      "@core-actions/*": ["./src/core-actions/*"],
-      "@errors/*": ["./src/errors/*"],
-      "@utils/*": ["./src/utils/*"]
-    }
+    "declarationDir": "./dist/types"
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
 }

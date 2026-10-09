@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-import { CreateTreeError } from '@errors/create-tree.error.js';
+import { CreateTreeError } from '../create-tree/create-tree-error.js';
 
 /**
  * Creates a directory at the provided path

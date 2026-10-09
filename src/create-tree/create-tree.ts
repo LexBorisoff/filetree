@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { CreateTreeError } from '@errors/create-tree.error.js';
 import { createDir } from '@utils/create-dir.js';
+
+import { CreateTreeError } from './create-tree-error.js';
 
 import type { FileTree } from '../main.js';
 import type { TreeInterface } from '@app-types/tree.types.js';

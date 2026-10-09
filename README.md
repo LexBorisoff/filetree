@@ -5,7 +5,7 @@
 ![NPM Version](https://img.shields.io/npm/v/@lexjs/filetree)
 ![Static Badge](https://img.shields.io/badge/package-ESM--only-ffe536)
 
-Library that allows to work with the file system in Node.js by defining a tree of files and directories and a set of actions to perform on that tree, such as reading/writing a file, creating/deleting a file/directory, etc. Any Node.js operation that is performed on files and directories can be abstracted as an action.
+Library that allows to work with the file system in Node.js by defining a tree of files and directories and a set of actions to perform on that tree, such as creating/deleting a file/directory, reading/writing a file, etc. Any Node.js operation that is performed on files and directories can be abstracted as an action.
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -60,7 +60,7 @@ const fileTree = new FileTree('/path/to/tree/root', {
 });
 ```
 
-> ⚠️ It is important to create the tree in the file system, if it doesn't already exist, before using actions - [see here](#creating-the-tree-in-the-file-system).
+> ⚠️ It is important to create the tree in the file system if it doesn't already exist, before using actions - [see here](#creating-the-tree-in-the-file-system).
 
 ### Actions registration
 
@@ -68,10 +68,10 @@ To register actions, call the `use` method on the created `FileTree` instance. T
 
 > ⚡ Learn more about actions, how they work, and how to define them [here](#actions).  
 
-This library exports a pre-defined object with some common file and directory operations, called `coreActions` exported from `@lexjs/filetree/core`.
+The library exports a pre-defined object with some common file and directory operations, called `coreActions` exported from `@lexjs/filetree/actions`.
 
 ```typescript
-import { coreActions } from '@lexjs/filetree/core';
+import { coreActions } from '@lexjs/filetree/actions';
 
 /* statements */
 
@@ -82,12 +82,43 @@ const actions = fileTree.use(coreActions);
 
 ### Using actions
 
-The returned value from calling the `use` method is a function that accepts a callback whose only argument is the tree, and whose return value is a property of that tree that you want to work with (the return value can also be the tree object itself representing the tree's root). You are now able to work with the tree by using actions.
+The returned value from calling the `use` method is a function (`actions` from the above example) that accepts a callback whose only argument is the tree (a tree proxy object), and whose return value is one of the following:
+
+1. a single property of that tree that you want to work with.
 
 ```typescript
 const file1 = actions((root) => root.file1);
-const dir1 = actions((root) => root.dir1);
+const file2 = actions(({ file2 }) => file2);
+const file3 = actions(({ dir1 }) => dir1.file3);
+/* ... etc. */
 
+const dir1 = actions((root) => root.dir1);
+const dir2 = actions(({ dir2 }) => dir2);
+const dir3 = actions(({ dir2 }) => dir2.dir3);
+/* ... etc. */
+```
+
+<!-- markdownlint-disable MD029 -->
+2. the root object itself to work with the tree's root directory.
+
+```typescript
+const rootDir = actions((root) => root);
+```
+
+<!-- markdownlint-disable MD029 -->
+3. a tuple of tree's objects representing files and directories you want to work with.
+
+```typescript
+const [rootDir, file3, dir2] = actions((root) => [
+  root,
+  root.dir1.file3
+  root.dir2,
+]);
+```
+
+You are now ready to work with the returned tree objects by using actions registered earlier.
+
+```typescript
 // file core actions
 file1.getPath();
 file1.read();
@@ -97,14 +128,16 @@ file1.clear();
 // dir core actions
 dir1.getPath();
 dir1.exists('file2');
-dir1.dirCreate('new-dir');
-dir1.dirDelete('new-dir');
-dir1.fileRead('file2');
-dir1.fileWrite('file2', 'File 2 new data');
-dir1.fileClear('file2');
-dir1.fileCreate('new-file');
-dir1.fileDelete('new-file');
+dir1.createDir('new-dir');
+dir1.deleteDir('new-dir');
+dir1.createFile('new-file');
+dir1.deleteFile('new-file');
+dir1.readFile('file2');
+dir1.writeFile('file2', 'File 2 new data');
+dir1.clearFile('file2');
 ```
+
+You can define your own set of file and directory actions by following the docs [here](#actions).
 
 ## Tree
 
@@ -148,7 +181,7 @@ const fileTree = new FileTree('/path/to/tree/root', tree);
 
 ### Creating the tree in the file system
 
-If the tree that was provided when instantiating the `FileTree` class does not exist in the file system, it is important that you create it before using actions. The tree can be created by calling the `createTree` function that accepts an `FileTree` instance:
+If the tree that was provided when instantiating the `FileTree` class does not exist in the file system, it is important that you create it before using actions. The tree can be created by calling the `createTree` function that accepts a `FileTree` instance:
 
 ```typescript
 import { createTree, FileTree } from '@lexjs/filetree';
@@ -175,18 +208,18 @@ An action is a function that performs some operation on a given file or director
 
 The `use` method accepts an object that has 2 properties:
 
-- `file` - a function that takes a `targetFile` object of type `FileTargetInterface` and returns an object with file actions.
-- `dir` - a function that takes a `targetDir` object of type `DirTargetInterface` and returns an object with directory actions.
+- `file` - a function that takes a `targetFile` object of type `FileObjectInterface` and returns an object with file actions.
+- `dir` - a function that takes a `targetDir` object of type `DirObjectInterface` and returns an object with directory actions.
 
 ```typescript
 // describes targetFile
-interface FileTargetInterface {
+interface FileObjectInterface {
   type: 'file';
   path: string;
 }
 
 // describes targetDir
-interface DirTargetInterface<Tree extends TreeInterface> {
+interface DirObjectInterface<Tree extends TreeInterface> {
   type: 'dir';
   children: ObjectTreeType<Tree>;
   path: string;
@@ -194,9 +227,9 @@ interface DirTargetInterface<Tree extends TreeInterface> {
 
 type ObjectTreeType<Tree extends TreeInterface> = {
   [key in keyof Tree]: Tree[key] extends string
-    ? FileTargetInterface
+    ? FileObjectInterface
     : Tree[key] extends TreeInterface
-      ? DirTargetInterface<Tree[key]>
+      ? DirObjectInterface<Tree[key]>
       : never;
 };
 ```
@@ -236,7 +269,7 @@ const actions = fileTree.use({
 
 ### Target file and directory objects
 
-The `file` method accepts an argument of type `FileTargetInterface` and the `dir` method accepts an argument of type `DirTargetInterface`. These arguments are objects that *represent* the selected file or directory from the tree when you call the function returned from the `use` method. Following the above example, when selecting a file and a directory like this:
+The `file` method accepts an argument of type `FileObjectInterface` and the `dir` method accepts an argument of type `DirObjectInterface`. These arguments are objects that *represent* the selected file or directory from the tree when you call the function returned from the `use` method. Following the above example, when selecting a file and a directory like this:
 
 ```typescript
 const file1 = actions((root) => root.dir1.dir2.file1);
@@ -273,7 +306,7 @@ and `targetDir` would be as follows:
 
 ### Utility methods
 
-The `FileTree` class has static utility methods that help you create actions that can be provided to the `use` method. This could be useful when you want to export common actions, or if some of your actions need to return the actions themselves, for example when creating a new file or directory.
+The `FileTree` class has static utility methods that help you create actions that can be provided to the `use` method. This could be helpful when you want to export common actions, or if some of your actions need to return the actions themselves, for example when creating a new file or directory.
 
 ```typescript
 import fs from 'node:fs';
@@ -335,14 +368,14 @@ const actions = fileTree.use({
 });
 
 const root = actions((root) => root);
-const newFile1 = root.createFile('new-file1', 'New file 1 data');
+const newFile1 = root.createFile('new-file-1', 'New file 1 data');
 const data1 = newFile1.read(); // New file 1 data
 
 const dir1 = actions((root) => root.dir1);
-const newDir1 = dir1.createDir('new-dir1');
-const newDir2 = newDir1.createDir('new-dir2');
-const newDir3 = newDir2.createDir('new-dir3');
-const newFile2 = newDir3.createFile('new-file2', 'New file 2 data');
+const newDir1 = dir1.createDir('new-dir-1');
+const newDir2 = newDir1.createDir('new-dir-2');
+const newDir3 = newDir2.createDir('new-dir-3');
+const newFile2 = newDir3.createFile('new-file-2', 'New file 2 data');
 const data2 = newFile2.read(); // New file 2 data
 ```
 
@@ -350,11 +383,11 @@ const data2 = newFile2.read(); // New file 2 data
 
 ## Core Actions
 
-The library exports a set of common actions called `coreActions` from `@lexjs/filetree/core` that can be provided to the `use` method.
+The library exports a set of common actions called `coreActions` from `@lexjs/filetree/actions` that can be provided to the `use` method.
 
 ```typescript
 import { FileTree } from '@lexjs/filetree';
-import { coreActions } from '@lexjs/filetree/core';
+import { coreActions } from '@lexjs/filetree/actions';
 
 const fileTree = new FileTree('/path/to/tree/root', {
   /* tree definition */
@@ -383,7 +416,7 @@ getPath(): string
 #### *Example*
 
 ```typescript
-const file = actions((root) => root.file);
+const file = actions(({ file }) => file);
 const filePath = file.getPath();
 ```
 
@@ -405,7 +438,7 @@ read(): string | null
 #### *Example*
 
 ```typescript
-const file = actions((root) => root.file);
+const file = actions(({ file }) => file);
 const fileData = file.read();
 ```
 
@@ -422,7 +455,7 @@ write<Data>(data: Data): void
 #### *Example*
 
 ```typescript
-const file = actions((root) => root.file);
+const file = actions(({ file }) => file);
 file.write('New file data');
 ```
 
@@ -439,7 +472,7 @@ clear(): void
 #### *Example*
 
 ```typescript
-const file = actions((root) => root.file);
+const file = actions(({ file }) => file);
 file.clear();
 ```
 
@@ -447,13 +480,13 @@ file.clear();
 
 - [`getPath`](#getpath-directory-action)
 - [`exists`](#exists)
-- [`dirCreate`](#dircreate)
-- [`dirDelete`](#dirdelete)
-- [`fileCreate`](#filecreate)
-- [`fileDelete`](#filedelete)
-- [`fileRead`](#fileread)
-- [`fileWrite`](#filewrite)
-- [`fileClear`](#fileclear)
+- [`createDir`](#createdir)
+- [`deleteDir`](#deletedir)
+- [`createFile`](#createfile)
+- [`deleteFile`](#deletefile)
+- [`readFile`](#readfile)
+- [`writeFile`](#writefile)
+- [`clearFile`](#clearfile)
 
 ### `getPath` (directory action)
 
@@ -490,7 +523,7 @@ const fileExists = dir.exists('some-file');
 const dirExists = dir.exists('some-dir');
 ```
 
-### `dirCreate`
+### `createDir`
 
 Creates a new directory inside the target directory.
 
@@ -503,51 +536,51 @@ Creates a new directory inside the target directory.
 #### *Definition*
 
 ```typescript
-dirCreate(dirName: string, recursive: boolean = false): DirActions | false
+createDir(dirName: string, recursive: boolean = false): DirActions | false
 ```
 
 #### *Example*
 
 ```typescript
 const dir = actions((root) => root);
-const newDir = dir.dirCreate('new-dir');
+const newDir = dir.createDir('new-dir');
 
 // you can access all the directory actions on the newDir
 newDir.getPath();
 
 // even create another new directory!
-const anotherDir = newDir.dirCreate('foo');
+const anotherDir = newDir.createDir('foo');
 ```
 
 > In the above example, `newDir` has all the directory actions just like accessing a tree directory with a function returned by calling the `.use()` method (in our examples, we named that function `actions`).
 
-#### *Creating a nested directory*
+#### *Creating a directory recursively*
 
-To create a nested directory, set the `recursive` flag to `true`:
+To create a nested directory recursively, set the `recursive` flag to `true`:
 
 ```typescript
 const dir = actions((root) => root);
-const newDir = dir.dirCreate('nested/new-dir', true);
+const newDir = dir.createDir('nested/new-dir', true);
 ```
 
-### `dirDelete`
+### `deleteDir`
 
 Deletes a directory inside the target directory.
 
 #### *Definition*
 
 ```typescript
-dirDelete(dirName: string): void
+deleteDir(dirName: string): void
 ```
 
 #### *Example*
 
 ```typescript
 const dir = actions((root) => root);
-dir.dirDelete('some-dir');
+dir.deleteDir('some-dir');
 ```
 
-### `fileCreate`
+### `createFile`
 
 Creates a new file inside the target directory.
 
@@ -560,7 +593,7 @@ Creates a new file inside the target directory.
 #### *Definition*
 
 ```typescript
-fileCreate(fileName: string, data: unknown = ''): FileActions | false
+createFile(fileName: string, data: unknown = ''): FileActions | false
 ```
 
 > If the `data` argument is provided and the file already exists, the file will be overwritten. Data can be of type `string` or `NodeJS.ArrayBufferView`, otherwise it gets stringified.
@@ -569,7 +602,7 @@ fileCreate(fileName: string, data: unknown = ''): FileActions | false
 
 ```typescript
 const dir = actions((root) => root);
-const newFile = dir.fileCreate('new-file', 'file data');
+const newFile = dir.createFile('new-file', 'file data');
 
 // you can access all the file actions on the newFile
 newFile.getPath();
@@ -580,24 +613,24 @@ newFile.clear();
 
 > In the above example, `newFile` has all the file actions just like accessing a tree file with a function returned by calling the `.use()` method (in our examples, we named that function `actions`).
 
-### `fileDelete`
+### `deleteFile`
 
 Deletes a file inside the target directory.
 
 #### *Definition*
 
 ```typescript
-fileDelete(fileName: string): void
+deleteFile(fileName: string): void
 ```
 
 #### *Example*
 
 ```typescript
 const dir = actions((root) => root);
-dir.fileDelete('some-file');
+dir.deleteFile('some-file');
 ```
 
-### `fileRead`
+### `readFile`
 
 Reads the contents of a file inside the target directory.
 
@@ -609,46 +642,46 @@ Reads the contents of a file inside the target directory.
 #### *Definition*
 
 ```typescript
-fileRead(fileName: string): string | null
+readFile(fileName: string): string | null
 ```
 
 #### *Example*
 
 ```typescript
 const dir = actions((root) => root);
-const fileData = dir.fileRead('some-file');
+const fileData = dir.readFile('some-file');
 ```
 
-### `fileWrite`
+### `writeFile`
 
-Writes new data to a file inside the target directory. Data can be of type `string` or `NodeJS.ArrayBufferView`, otherwise it gets stringified.
+Writes new data to a file inside the target directory. Data can be of type `string` or `NodeJS.ArrayBufferView`, otherwise it gets stringified. If the file does not exist, it gets created.
 
 #### *Definition*
 
 ```typescript
-fileWrite<Data>(fileName: string, data: Data): void
+writeFile<Data>(fileName: string, data: Data): void
 ```
 
 #### *Example*
 
 ```typescript
 const dir = actions((root) => root);
-dir.fileWrite('some-file', 'some data');
+dir.writeFile('some-file', 'some data');
 ```
 
-### `fileClear`
+### `clearFile`
 
 Clears the contents of a file inside the target directory.
 
 #### *Definition*
 
 ```typescript
-fileClear(fileName: string): void
+clearFile(fileName: string): void
 ```
 
 #### *Example*
 
 ```typescript
 const dir = actions((root) => root);
-dir.fileClear('some-file');
+dir.clearFile('some-file');
 ```
